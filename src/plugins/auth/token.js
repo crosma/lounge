@@ -16,7 +16,6 @@ function tokenAuth(manager, client, user, authToken, callback) {
 		return callback(false);
 	}
 	
-	 
 	const matching = client.authToken === authToken;
 	
 	client.authToken = false;  //tokens are single use
@@ -26,7 +25,7 @@ function tokenAuth(manager, client, user, authToken, callback) {
 
 
 function isTokenEnabled() {
-	return Helper.config.token_auth && Helper.config.token_auth.enabled && Helper.config.api && Helper.config.api.enabled;
+	return Helper.config.ldap.enable;
 }
 
 module.exports = {

@@ -439,29 +439,8 @@ module.exports = {
 		},
 	},
 	
-	// API
-	//
-	// @type     object
-	// @default  {}
-	//
-	api: {
-		// Enable the API
-		//
-		// @type     boolean
-		// @default  false
-		//
-		enabled: false,
 
-		// Password for API requests.
-		// Must be set for the API to accept requests.
-		//
-		// @type     boolean
-		// @default  ""
-		//
-		password: "",
-	},	
-	
-	
+
 	// Automated account login.
 	// This requires the API to be enabled.
 	//
@@ -474,10 +453,34 @@ module.exports = {
 		// @type     boolean
 		// @default  false
 		//
-		enabled: false,
+		enabled: true,
 	},
-
 	
+	// API
+	//
+	// @type     object
+	// @default  {}
+	//
+	api: {
+		// Enable the API
+		//
+		// @type     boolean
+		// @default  false 
+		//
+		enabled: true,
+
+		// Password for API requests.
+		// Must be set for the API to accept requests.
+		//
+		// @type     boolean
+		// @default  ""
+		//
+		password: "",
+	},	
+	
+	// Extra debugging
+
+
 	
 	// ## Debugging settings
 
