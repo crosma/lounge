@@ -80,6 +80,7 @@ function Client(manager, name, config) {
 		networks: [],
 		sockets: manager.sockets,
 		manager: manager,
+		authToken: false,
 	});
 
 	var client = this;
