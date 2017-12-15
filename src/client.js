@@ -84,6 +84,7 @@ function Client(manager, name, config = {}) {
 		manager: manager,
 		messageStorage: [],
 		highlightRegex: null,
+		authToken: false,
 	});
 
 	const client = this;

@@ -26,6 +26,7 @@ packages.loadPackages();
 // The order defined the priority: the first available plugin is used
 // ALways keep local auth in the end, which should always be enabled.
 const authPlugins = [
+	require("./plugins/auth/token"),
 	require("./plugins/auth/ldap"),
 	require("./plugins/auth/local"),
 ];
@@ -71,6 +72,8 @@ module.exports = function() {
 
 		return res.sendFile(theme);
 	});
+	
+	app.get("/api/get_auth_token", apiCheckAuth, require('./api/get_auth_token'));
 
 	app.get("/packages/:package/:filename", (req, res) => {
 		const packageName = req.params.package;
@@ -168,6 +171,9 @@ module.exports = function() {
 		});
 
 		manager = new ClientManager();
+		
+		//Share the client manager with express requests (for the API)
+		app.set('ClientManager', manager);
 
 		new Identification((identHandler) => {
 			manager.init(identHandler, sockets);
@@ -242,6 +248,21 @@ function getClientIp(socket) {
 function allRequests(req, res, next) {
 	res.setHeader("X-Content-Type-Options", "nosniff");
 	return next();
+}
+
+function apiCheckAuth(req, res, next) {
+	if (!Helper.config.api || !Helper.config.api.enabled) {
+		res.statusCode = 403;
+		res.end('API not enabled');
+	} else if (Helper.config.api.password.trim() === "") {
+		res.statusCode = 403;
+		res.end('API password not set');
+	} else if (!req.query.password || Helper.config.api.password !==  req.query.password) {
+		res.statusCode = 401;
+		res.end('Unauthorized');
+	} else {
+		next();
+	}
 }
 
 function index(req, res, next) {
