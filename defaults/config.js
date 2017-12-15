@@ -486,7 +486,45 @@ module.exports = {
 
 		},
 	},
+	
 
+	// Automated account login.
+	// This requires the API to be enabled.
+	//
+	// @type     object
+	// @default  {}
+	//
+	token_auth: {
+		// Enable token auth
+		//
+		// @type     boolean
+		// @default  false
+		//
+		enabled: false,
+	},
+	
+	// API
+	//
+	// @type     object
+	// @default  {}
+	//
+	api: {
+		// Enable the API
+		//
+		// @type     boolean
+		// @default  false
+		//
+		enabled: false,
+
+		// Password for API requests.
+		// Must be set for the API to accept requests.
+		//
+		// @type     boolean
+		// @default  ""
+		//
+		password: "",
+	},	
+	
 	// Extra debugging
 	//
 	// @type     object
