@@ -1,6 +1,8 @@
 "use strict";
 
 const $ = require("jquery");
+const queryString = require('query-string');
+const createHistory = require('history').createBrowserHistory
 const socket = require("../socket");
 const storage = require("../localStorage");
 const utils = require("../utils");
@@ -49,6 +51,8 @@ socket.on("auth", function(data) {
 
 	let token;
 	const user = storage.get("user");
+	
+
 
 	if (!data.success) {
 		if (login.length === 0) {
@@ -87,6 +91,28 @@ socket.on("auth", function(data) {
 			socket.emit("auth", {user, token, lastMessage});
 		}
 	}
+	
+		console.log('auth', data, user, '+' + token);
+	
+	// If the query string contains a user and auth token, try to login with
+	// them but only if there is no session token
+	const parsed = queryString.parse(location.search);
+	if (!token && parsed.user && parsed.authToken) {
+		storage.set("user", parsed.user);
+
+		socket.emit("auth", {
+			user: parsed.user,
+			password: parsed.authToken,
+		});
+		
+		// Since the token is single use remove it from the URL to prevent
+		// any issues with reusing an existing session
+		const history = createHistory()
+		
+		history.push('/')
+	}
+		
+		
 
 	if (user) {
 		login.find("input[name='user']").val(user);

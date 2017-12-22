@@ -439,22 +439,6 @@ module.exports = {
 		},
 	},
 	
-
-	// Automated account login.
-	// This requires the API to be enabled.
-	//
-	// @type     object
-	// @default  {}
-	//
-	token_auth: {
-		// Enable token auth
-		//
-		// @type     boolean
-		// @default  false
-		//
-		enabled: false,
-	},
-	
 	// API
 	//
 	// @type     object
@@ -477,7 +461,24 @@ module.exports = {
 		password: "",
 	},	
 	
+	
+	// Automated account login.
+	// This requires the API to be enabled.
+	//
+	// @type     object
+	// @default  {}
+	//
+	token_auth: {
+		// Enable token auth
+		//
+		// @type     boolean
+		// @default  false
+		//
+		enabled: false,
+	},
 
+	
+	
 	// ## Debugging settings
 
 	// The `debug` object contains several settings to enable debugging in The
@@ -485,7 +486,7 @@ module.exports = {
 	// this may produce more logging or may affect connection performance so it is
 	// not recommended to use them by default.
 	//
-	// All values in the `debug` object are set to `false`.
+	// All values in the `debug` object are set to `false`.	
 	// Extra debugging
 	//
 	// @type     object
