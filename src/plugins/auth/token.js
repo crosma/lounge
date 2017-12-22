@@ -15,7 +15,7 @@ function tokenAuth(manager, client, user, authToken, callback) {
 		log.error(`User ${colors.bold(user)} with no auth token set tried to sign in.`);
 		return callback(false);
 	}
-	
+
 	const matching = client.authToken === authToken;
 	
 	client.authToken = false;  //tokens are single use
@@ -25,7 +25,7 @@ function tokenAuth(manager, client, user, authToken, callback) {
 
 
 function isTokenEnabled() {
-	return Helper.config.ldap.enable;
+	return Helper.config.token_auth && Helper.config.token_auth.enabled && Helper.config.api && Helper.config.api.enabled;
 }
 
 module.exports = {
