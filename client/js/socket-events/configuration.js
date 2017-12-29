@@ -66,4 +66,12 @@ socket.on("configuration", function(data) {
 			// Store the "previous" value, for next time
 			$(this).data("lastvalue", nick);
 		});
+		
+	if (data.ui && "connectEnabled" in data.ui && !data.ui.connectEnabled) {
+		$("#footer .connect").parent().remove();
+	}	
+	
+	if (data.ui && "signoutEnabled" in data.ui && !data.ui.signoutEnabled) {
+		$("#footer .sign-out").parent().remove();
+	}
 });
