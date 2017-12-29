@@ -25,7 +25,7 @@ function tokenAuth(manager, client, user, authToken, callback) {
 
 
 function isTokenEnabled() {
-	return Helper.config.token_auth && Helper.config.token_auth.enabled && Helper.config.api && Helper.config.api.enabled;
+	return Helper.config.tokenAuth && Helper.config.tokenAuth.enabled && Helper.config.api && Helper.config.api.enabled;
 }
 
 module.exports = {
