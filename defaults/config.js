@@ -439,6 +439,20 @@ module.exports = {
 		},
 	},
 	
+	// UI Options
+	//
+	// @type     object
+	// @default  {}
+	//
+	ui: {
+		// Enable the API
+		//
+		// @type     boolean
+		// @default  true
+		//
+		signoutEnabled: true,		
+	},	
+	
 	// API
 	//
 	// @type     object
