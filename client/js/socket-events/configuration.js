@@ -121,6 +121,15 @@ socket.on("configuration", function(data) {
 			parseOverrideParams(params, data);
 		}
 	}
+	
+	
+	if (data.ui && "connectEnabled" in data.ui && !data.ui.connectEnabled) {
+		$("#footer .connect").parent().remove();
+	}	
+	
+	if (data.ui && "signoutEnabled" in data.ui && !data.ui.signoutEnabled) {
+		$("#footer .sign-out").parent().remove();
+	}
 });
 
 function parseIrcUri(stringUri, defaults) {

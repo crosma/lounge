@@ -445,13 +445,20 @@ module.exports = {
 	// @default  {}
 	//
 	ui: {
-		// Enable the API
+		// Enable\disable network connect
 		//
 		// @type     boolean
 		// @default  true
 		//
-		signoutEnabled: true,		
-	},	
+		connectEnabled: true,	
+		
+		// Enable\disable network sign out
+		//
+		// @type     boolean
+		// @default  true
+		//
+		signoutEnabled: true,
+	},
 	
 	// API
 	//
