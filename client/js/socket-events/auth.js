@@ -97,7 +97,9 @@ socket.on("auth", function(data) {
 	// If the query string contains a user and auth token, try to login with
 	// them but only if there is no session token
 	const parsed = queryString.parse(location.search);
-	if (!token && parsed.user && parsed.authToken) {
+	if (parsed.user && parsed.authToken) {
+		console.log('meh');
+		
 		storage.set("user", parsed.user);
 
 		socket.emit("auth", {
@@ -106,13 +108,10 @@ socket.on("auth", function(data) {
 		});
 		
 		// Since the token is single use remove it from the URL to prevent
-		// any issues with reusing an existing session
+		// the user getting an authentication error
 		const history = createHistory()
-		
 		history.push('/')
 	}
-		
-		
 
 	if (user) {
 		login.find("input[name='user']").val(user);
