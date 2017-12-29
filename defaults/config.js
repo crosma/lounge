@@ -515,7 +515,7 @@ module.exports = {
 	// @type     object
 	// @default  {}
 	//
-	token_auth: {
+	tokenAuth: {
 		// Enable token auth
 		//
 		// @type     boolean
