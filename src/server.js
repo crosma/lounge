@@ -495,6 +495,7 @@ function getClientConfiguration() {
 		"useHexIp",
 		"themes",
 		"prefetch",
+		"ui",
 	]);
 
 	config.ldapEnabled = Helper.config.ldap.enable;
