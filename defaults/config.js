@@ -455,7 +455,7 @@ module.exports = {
 		// Password for API requests.
 		// Must be set for the API to accept requests.
 		//
-		// @type     boolean
+		// @type     string
 		// @default  ""
 		//
 		password: "",
