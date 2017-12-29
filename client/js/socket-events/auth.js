@@ -51,9 +51,8 @@ socket.on("auth", function(data) {
 
 	let token;
 	const user = storage.get("user");
+	const qs = queryString.parse(location.search);
 	
-
-
 	if (!data.success) {
 		if (login.length === 0) {
 			socket.disconnect();
@@ -69,6 +68,20 @@ socket.on("auth", function(data) {
 		error.show().closest("form").one("submit", function() {
 			error.hide();
 		});
+		
+	// If the query string contains a user and auth token, attempt auth.
+	} else if (qs.user && qs.authToken) {	
+		storage.set("user", qs.user);
+
+		socket.emit("auth", {
+			user: qs.user,
+			password: qs.authToken,
+		});
+		
+		// Since the token is single use remove it from the URL to prevent
+		// the user getting an authentication error
+		const history = createHistory()
+		history.push('/')
 	} else if (user) {
 		token = storage.get("token");
 
@@ -90,23 +103,6 @@ socket.on("auth", function(data) {
 
 			socket.emit("auth", {user, token, lastMessage});
 		}
-	}
-
-	// If the query string contains a user and auth token, try to login with
-	// them but only if there is no session token
-	const qs = queryString.parse(location.search);
-	if (qs.user && qs.authToken) {	
-		storage.set("user", qs.user);
-
-		socket.emit("auth", {
-			user: qs.user,
-			password: qs.authToken,
-		});
-		
-		// Since the token is single use remove it from the URL to prevent
-		// the user getting an authentication error
-		const history = createHistory()
-		history.push('/')
 	}
 
 	if (user) {

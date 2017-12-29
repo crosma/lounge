@@ -618,6 +618,7 @@ function getClientConfiguration(network) {
 		"displayNetwork",
 		"useHexIp",
 		"prefetch",
+		"ui",
 	]);
 
 	config.fileUpload = Helper.config.fileUpload.enable;
