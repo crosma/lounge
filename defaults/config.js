@@ -506,6 +506,13 @@ module.exports = {
 		// @default  true
 		//
 		signoutEnabled: true,
+		
+		// Enable\disable login form
+		//
+		// @type     boolean
+		// @default  true
+		//
+		loginEnabled: false,
 	},
 	
 	// API
