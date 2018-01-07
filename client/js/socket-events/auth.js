@@ -82,6 +82,10 @@ socket.on("auth", function(data) {
 		// the user getting an authentication error
 		const history = createHistory()
 		history.push('/')
+		
+		//if we're doing token auth, hide the login form
+		console.log('login', login.find('form'));
+		login.find('form').hide();
 	} else if (user) {
 		token = storage.get("token");
 
