@@ -11,7 +11,7 @@ const storage = require("../storage");
 
 process.setMaxListeners(0);
 
-let fetch_recipients = {};
+const fetchRecipients = {};
 
 module.exports = function(client, chan, msg) {
 	if (!Helper.config.prefetch) {
@@ -39,26 +39,25 @@ module.exports = function(client, chan, msg) {
 		shown: true,
 	})).slice(0, 5); // Only preview the first 5 URLs in message to avoid abuse
 
-
 	msg.previews.forEach((preview) => {
-		if (!fetch_recipients[preview.link]) {
-			fetch_recipients[preview.link] = [];
+		const recipient = {
+			msg: msg,
+			client: client,
+		};
+
+		if (!fetchRecipients[preview.link]) {
+			fetchRecipients[preview.link] = [recipient];
 
 			fetch(preview.link, function(res) {
-				if (res === null) {
-					return;
+				if (res !== null) {
+					parse(preview, res, fetchRecipients[preview.link]);
 				}
 
-				parse(preview, res, fetch_recipients[preview.link]);
-				
-				delete fetch_recipients[preview.link];
+				delete fetchRecipients[preview.link];
 			});
+		} else {
+			fetchRecipients[preview.link].push(recipient);
 		}
-		
-		fetch_recipients[preview.link].push({
-			msg: msg,
-			client: client
-		});
 	});
 };
 
@@ -173,13 +172,13 @@ function handlePreview(preview, res, recipients) {
 		}
 
 		preview.thumb = "";
-		return emitPreview(client, msg, preview);
+		return emitPreview(preview, recipients);
 	}
 
 	storage.store(res.data, extension, (uri) => {
 		preview.thumb = uri;
 
-		emitPreview(preview, recipients);
+		return emitPreview(preview, recipients);
 	});
 }
 
@@ -195,14 +194,13 @@ function emitPreview(preview, recipients) {
 	}
 
 	for (var i = 0; i < recipients.length; i++) {
-		let recipient = recipients[i];
+		const recipient = recipients[i];
 
 		recipient.client.emit("msg:preview", {
 			id: recipient.msg.id,
 			preview: preview,
 		});
-	};
-
+	}
 }
 
 function fetch(uri, cb) {
