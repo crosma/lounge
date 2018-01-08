@@ -25,6 +25,8 @@ if (semver.gte(process.version, "8.6.0") && tls.DEFAULT_ECDH_CURVE === "prime256
 
 const fetch_recipients = {};
 
+const fetch_recipients = {};
+
 module.exports = function(client, chan, msg) {
 	if (!Helper.config.prefetch) {
 		return;
@@ -78,6 +80,7 @@ module.exports = function(client, chan, msg) {
 	}, []);
 };
 
+
 function parseHtml(preview, res, client) {
 	return new Promise((resolve) => {
 		const $ = cheerio.load(res.data);
@@ -125,6 +128,7 @@ function parseHtml(preview, res, client) {
 			});
 	});
 }
+
 
 
 function parseHtmlMedia($, preview, client) {
