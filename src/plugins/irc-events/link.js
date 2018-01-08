@@ -10,6 +10,8 @@ const storage = require("../storage");
 
 process.setMaxListeners(0);
 
+let fetch_recipients = {};
+
 module.exports = function(client, chan, msg) {
 	if (!Helper.config.prefetch) {
 		return;
@@ -36,18 +38,30 @@ module.exports = function(client, chan, msg) {
 		shown: true,
 	})).slice(0, 5); // Only preview the first 5 URLs in message to avoid abuse
 
-	msg.previews.forEach((preview) => {
-		fetch(preview.link, function(res) {
-			if (res === null) {
-				return;
-			}
 
-			parse(msg, preview, res, client);
+	msg.previews.forEach((preview) => {
+		if (!fetch_recipients[preview.link]) {
+			fetch_recipients[preview.link] = [];
+
+			fetch(preview.link, function(res) {
+				if (res === null) {
+					return;
+				}
+
+				parse(preview, res, fetch_recipients[preview.link]);
+				
+				delete fetch_recipients[preview.link];
+			});
+		}
+		
+		fetch_recipients[preview.link].push({
+			msg: msg,
+			client: client
 		});
 	});
 };
 
-function parse(msg, preview, res, client) {
+function parse(preview, res, recipients) {
 	switch (res.type) {
 	case "text/html":
 		var $ = cheerio.load(res.data);
@@ -84,7 +98,7 @@ function parse(msg, preview, res, client) {
 					preview.thumb = "";
 				}
 
-				handlePreview(client, msg, preview, resThumb);
+				handlePreview(preview, resThumb, recipients);
 			});
 
 			return;
@@ -138,22 +152,22 @@ function parse(msg, preview, res, client) {
 		return;
 	}
 
-	handlePreview(client, msg, preview, res);
+	handlePreview(preview, res, recipients);
 }
 
-function handlePreview(client, msg, preview, res) {
+function handlePreview(preview, res, recipients) {
 	if (!preview.thumb.length || !Helper.config.prefetchStorage) {
-		return emitPreview(client, msg, preview);
+		return emitPreview(preview, recipients);
 	}
 
 	storage.store(res.data, res.type.replace("image/", ""), (uri) => {
 		preview.thumb = uri;
 
-		emitPreview(client, msg, preview);
+		emitPreview(preview, recipients);
 	});
 }
 
-function emitPreview(client, msg, preview) {
+function emitPreview(preview, recipients) {
 	// If there is no title but there is preview or description, set title
 	// otherwise bail out and show no preview
 	if (!preview.head.length && preview.type === "link") {
@@ -164,10 +178,15 @@ function emitPreview(client, msg, preview) {
 		}
 	}
 
-	client.emit("msg:preview", {
-		id: msg.id,
-		preview: preview,
-	});
+	for (var i = 0; i < recipients.length; i++) {
+		let recipient = recipients[i];
+
+		recipient.client.emit("msg:preview", {
+			id: recipient.msg.id,
+			preview: preview,
+		});
+	};
+
 }
 
 function fetch(uri, cb) {
