@@ -23,6 +23,8 @@ if (semver.gte(process.version, "8.6.0") && tls.DEFAULT_ECDH_CURVE === "prime256
 	tls.DEFAULT_ECDH_CURVE = "auto";
 }
 
+const fetch_recipients = {};
+
 module.exports = function(client, chan, msg) {
 	if (!Helper.config.prefetch) {
 		return;
@@ -123,6 +125,7 @@ function parseHtml(preview, res, client) {
 			});
 	});
 }
+
 
 function parseHtmlMedia($, preview, client) {
 	return new Promise((resolve, reject) => {
@@ -262,6 +265,7 @@ function handlePreview(client, chan, msg, preview, res) {
 		}
 
 		preview.thumb = "";
+
 		return emitPreview(client, chan, msg, preview);
 	}
 
