@@ -27,6 +27,8 @@ const fetch_recipients = {};
 
 const fetchRecipients = {};
 
+const fetchRecipients = {};
+
 module.exports = function(client, chan, msg) {
 	if (!Helper.config.prefetch) {
 		return;
@@ -255,6 +257,7 @@ function parse(msg, chan, preview, res, client) {
 function handlePreview(client, chan, msg, preview, res) {
 	if (!preview.thumb.length || !Helper.config.prefetchStorage) {
 		return emitPreview(client, chan, msg, preview);
+
 	}
 
 	// Get the correct file extension for the provided content-type
@@ -270,11 +273,13 @@ function handlePreview(client, chan, msg, preview, res) {
 
 		preview.thumb = "";
 
+
 		return emitPreview(client, chan, msg, preview);
 	}
 
 	storage.store(res.data, extension, (uri) => {
 		preview.thumb = uri;
+
 
 		emitPreview(client, chan, msg, preview);
 	});
@@ -290,6 +295,7 @@ function emitPreview(client, chan, msg, preview) {
 			return removePreview(msg, preview);
 		}
 	}
+
 
 	client.emit("msg:preview", {
 		id: msg.id,
