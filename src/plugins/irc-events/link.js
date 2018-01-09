@@ -41,23 +41,27 @@ module.exports = function(client, chan, msg) {
 
 	msg.previews.forEach((preview) => {
 		if (!fetch_recipients[preview.link]) {
-			fetch_recipients[preview.link] = [];
+			fetch_recipients[preview.link] = [{
+				msg: msg,
+				client: client,
+			}];
 
 			fetch(preview.link, function(res) {
-				delete fetch_recipients[preview.link];
-				
 				if (res === null) {
+					delete fetch_recipients[preview.link];
 					return;
 				}
 
 				parse(preview, res, fetch_recipients[preview.link]);
+				
+				delete fetch_recipients[preview.link];
+			});
+		} else {
+			fetch_recipients[preview.link].push({
+				msg: msg,
+				client: client,
 			});
 		}
-
-		fetch_recipients[preview.link].push({
-			msg: msg,
-			client: client,
-		});
 	});
 };
 
