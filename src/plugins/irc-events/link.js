@@ -3,12 +3,15 @@
 const cheerio = require("cheerio");
 const request = require("request");
 const url = require("url");
+const mime = require("mime-types");
 const Helper = require("../../helper");
 const cleanIrcMessage = require("../../../client/js/libs/handlebars/ircmessageparser/cleanIrcMessage");
 const findLinks = require("../../../client/js/libs/handlebars/ircmessageparser/findLinks");
 const storage = require("../storage");
 
 process.setMaxListeners(0);
+
+const fetch_recipients = {};
 
 module.exports = function(client, chan, msg) {
 	if (!Helper.config.prefetch) {
@@ -37,17 +40,28 @@ module.exports = function(client, chan, msg) {
 	})).slice(0, 5); // Only preview the first 5 URLs in message to avoid abuse
 
 	msg.previews.forEach((preview) => {
-		fetch(preview.link, function(res) {
-			if (res === null) {
-				return;
-			}
+		if (!fetch_recipients[preview.link]) {
+			fetch_recipients[preview.link] = [];
 
-			parse(msg, preview, res, client);
+			fetch(preview.link, function(res) {
+				delete fetch_recipients[preview.link];
+				
+				if (res === null) {
+					return;
+				}
+
+				parse(preview, res, fetch_recipients[preview.link]);
+			});
+		}
+
+		fetch_recipients[preview.link].push({
+			msg: msg,
+			client: client,
 		});
 	});
 };
 
-function parse(msg, preview, res, client) {
+function parse(preview, res, recipients) {
 	switch (res.type) {
 	case "text/html":
 		var $ = cheerio.load(res.data);
@@ -84,7 +98,7 @@ function parse(msg, preview, res, client) {
 					preview.thumb = "";
 				}
 
-				handlePreview(client, msg, preview, resThumb);
+				handlePreview(preview, resThumb, recipients);
 			});
 
 			return;
@@ -138,22 +152,37 @@ function parse(msg, preview, res, client) {
 		return;
 	}
 
-	handlePreview(client, msg, preview, res);
+	handlePreview(preview, res, recipients);
 }
 
-function handlePreview(client, msg, preview, res) {
+function handlePreview(preview, res, recipients) {
 	if (!preview.thumb.length || !Helper.config.prefetchStorage) {
-		return emitPreview(client, msg, preview);
+		return emitPreview(preview, recipients);
 	}
 
-	storage.store(res.data, res.type.replace("image/", ""), (uri) => {
+	// Get the correct file extension for the provided content-type
+	// This is done to prevent user-input being stored in the file name (extension)
+	const extension = mime.extension(res.type);
+
+	if (!extension) {
+		// For link previews, drop the thumbnail
+		// For other types, do not display preview at all
+		if (preview.type !== "link") {
+			return;
+		}
+
+		preview.thumb = "";
+		return emitPreview(preview, recipients);
+	}
+
+	storage.store(res.data, extension, (uri) => {
 		preview.thumb = uri;
 
-		emitPreview(client, msg, preview);
+		return emitPreview(preview, recipients);
 	});
 }
 
-function emitPreview(client, msg, preview) {
+function emitPreview(preview, recipients) {
 	// If there is no title but there is preview or description, set title
 	// otherwise bail out and show no preview
 	if (!preview.head.length && preview.type === "link") {
@@ -164,10 +193,14 @@ function emitPreview(client, msg, preview) {
 		}
 	}
 
-	client.emit("msg:preview", {
-		id: msg.id,
-		preview: preview,
-	});
+	for (var i = 0; i < recipients.length; i++) {
+		const recipient = recipients[i];
+
+		recipient.client.emit("msg:preview", {
+			id: recipient.msg.id,
+			preview: preview,
+		});
+	}
 }
 
 function fetch(uri, cb) {
