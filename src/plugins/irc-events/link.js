@@ -25,7 +25,7 @@ if (semver.gte(process.version, "8.6.0") && tls.DEFAULT_ECDH_CURVE === "prime256
 
 const fetch_recipients = {};
 
-const fetch_recipients = {};
+const fetchRecipients = {};
 
 module.exports = function(client, chan, msg) {
 	if (!Helper.config.prefetch) {
