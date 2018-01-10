@@ -11,7 +11,7 @@ const storage = require("../storage");
 
 process.setMaxListeners(0);
 
-const fetch_recipients = {};
+const fetchRecipients = {};
 
 module.exports = function(client, chan, msg) {
 	if (!Helper.config.prefetch) {
@@ -40,27 +40,23 @@ module.exports = function(client, chan, msg) {
 	})).slice(0, 5); // Only preview the first 5 URLs in message to avoid abuse
 
 	msg.previews.forEach((preview) => {
-		if (!fetch_recipients[preview.link]) {
-			fetch_recipients[preview.link] = [{
-				msg: msg,
-				client: client,
-			}];
+		const recipient = {
+			msg: msg,
+			client: client,
+		};
+
+		if (!fetchRecipients[preview.link]) {
+			fetchRecipients[preview.link] = [recipient];
 
 			fetch(preview.link, function(res) {
-				if (res === null) {
-					delete fetch_recipients[preview.link];
-					return;
+				if (res !== null) {
+					parse(preview, res, fetchRecipients[preview.link]);
 				}
 
-				parse(preview, res, fetch_recipients[preview.link]);
-				
-				delete fetch_recipients[preview.link];
+				delete fetchRecipients[preview.link];
 			});
 		} else {
-			fetch_recipients[preview.link].push({
-				msg: msg,
-				client: client,
-			});
+			fetchRecipients[preview.link].push(recipient);
 		}
 	});
 };
