@@ -2676,3 +2676,42 @@ part/quit messages where we don't load previews (adds a blank line otherwise) */
 #chat table.channel-list .topic {
 	white-space: pre-wrap;
 }
+
+
+div.preview[data-url*="mafiareturns.com"] {
+	display: none;
+}
+
+
+
+
+#chat .content {
+        padding-left: 0;
+}
+#chat .messages {
+	display: block;
+	padding: 5px 10px;
+}
+#chat .msg:last-child {
+	height: auto;
+}
+#chat .time {
+	display: inline;
+}
+#chat .from,
+#chat .text {
+	background: none;
+	border: 0;
+	display: inline;
+}
+#chat .from::after{
+        display:none; 
+}
+#chat .from {
+        width: auto;
+        padding-left: 5px;
+        padding-right: 5px;
+}
+#chat .wrap {
+	display: inline;
+}

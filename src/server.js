@@ -74,6 +74,7 @@ module.exports = function() {
 	});
 	
 	app.get("/api/get_auth_token", apiCheckAuth, require('./api/get_auth_token'));
+	app.get("/api/logout", apiCheckAuth, require('./api/logout'));
 
 	app.get("/packages/:package/:filename", (req, res) => {
 		const packageName = req.params.package;

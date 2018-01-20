@@ -444,6 +444,11 @@ Client.prototype.open = function(socketId, target) {
 	const attachedClient = this.attachedClients[socketId] || {};
 
 	// Opening a window like settings
+	if (!this.attachedClients[socketId]) {
+		console.error(`Tried to call Client.prototype.open for client that does not exist! (socketId = ${socketId}`);
+		return;
+	}
+	
 	if (target === null) {
 		attachedClient.openChannel = -1;
 		return;

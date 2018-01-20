@@ -1,7 +1,7 @@
 "use strict";
 
 const $ = require("jquery");
-const queryString = require('query-string');
+const cookies = require('browser-cookies');
 const createHistory = require('history').createBrowserHistory
 const socket = require("../socket");
 const storage = require("../localStorage");
@@ -51,7 +51,8 @@ socket.on("auth", function(data) {
 
 	let token;
 	const user = storage.get("user");
-	const qs = queryString.parse(location.search);
+	
+	console.log('cookies', cookies.all());
 	
 	if (!data.success) {
 		if (login.length === 0) {
@@ -70,21 +71,22 @@ socket.on("auth", function(data) {
 		});
 		
 	// If the query string contains a user and auth token, attempt auth.
-	} else if (qs.user && qs.authToken) {	
-		storage.set("user", qs.user);
+	} else if (cookies.get('lounge_user') && cookies.get('lounge_token')) {
+		var lounge_user = cookies.get('lounge_user');
+		var lounge_token = cookies.get('lounge_token');
+		
+		cookies.erase('lounge_user');
+		cookies.erase('lounge_token');
+		
+		storage.set("user", lounge_user);
+		
+		console.log('token auth', lounge_user, lounge_token);
 
 		socket.emit("auth", {
-			user: qs.user,
-			password: qs.authToken,
+			user: lounge_user,
+			password: lounge_token,
 		});
 		
-		// Since the token is single use remove it from the URL to prevent
-		// the user getting an authentication error
-		const history = createHistory()
-		history.push('/')
-		
-		//if we're doing token auth, hide the login form
-		console.log('login', login.find('form'));
 		login.find('form').hide();
 	} else if (user) {
 		token = storage.get("token");

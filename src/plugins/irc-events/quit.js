@@ -6,6 +6,18 @@ module.exports = function(irc, network) {
 	const client = this;
 
 	irc.on("quit", function(data) {
+		/*
+		const lobby = network.channels[0];
+		const msg = new Msg({
+			type: Msg.Type.ERROR,
+			text: "You may not disconnect.",
+			showInActive: true,
+		});
+		lobby.pushMessage(client, msg, true);
+		
+		return false;
+		*/
+		
 		network.channels.forEach((chan) => {
 			const user = chan.findUser(data.nick);
 

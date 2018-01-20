@@ -204,6 +204,7 @@ window.vueMounted = () => {
 	$("#help").on("click", "#view-changelog, #back-to-help", openWindow);
 	$("#changelog").on("click", "#back-to-help", openWindow);
 
+	
 	sidebar.on("click", ".close", function() {
 		utils.closeChan($(this).closest(".chan"));
 	});
