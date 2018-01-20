@@ -13,6 +13,14 @@ exports.input = function(network, chan) {
 		}));
 		return;
 	}
+	
+	if (chan.name == '#main') {
+		chan.pushMessage(this, new Msg({
+			type: Msg.Type.ERROR,
+			text: "You may not leave #main.",
+		}));
+		return;	
+	}
 
 	network.irc.part(chan.name, "Rejoining");
 	network.irc.join(chan.name);

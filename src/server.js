@@ -35,6 +35,18 @@ module.exports = function() {
 	log.info(`Configuration file: ${colors.green(Helper.getConfigPath())}`);
 
 	var app = express()
+
+/*
+.use(function (req, res, next) {
+    var filename = path.basename(req.url);
+    var extension = path.extname(filename);
+
+       console.log("The file " + filename + " was requested.");
+	   
+    next();
+})
+*/
+
 		.disable("x-powered-by")
 		.use(allRequests)
 		.use(index)
@@ -54,6 +66,7 @@ module.exports = function() {
 	});
 	
 	app.get("/api/get_auth_token", apiCheckAuth, require('./api/get_auth_token'));
+	app.get("/api/logout", apiCheckAuth, require('./api/logout'));
 
 	var config = Helper.config;
 	var server = null;

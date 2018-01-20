@@ -149,12 +149,16 @@ $(function() {
 					data: target.data("id"),
 				});
 			}
-			output += templates.contextmenu_item({
-				class: "close",
-				action: "close",
-				text: target.hasClass("lobby") ? "Disconnect" : target.hasClass("channel") ? "Leave" : "Close",
-				data: target.data("target"),
-			});
+		
+			if (!target.hasClass("lobby") && !target.hasClass('chan-\\#main')) {
+				output += templates.contextmenu_item({
+					class: "close",
+					action: "close",
+					text: target.hasClass("lobby") ? "Disconnect" : target.hasClass("channel") ? "Leave" : "Close",
+					data: target.data("target"),
+				});
+			}
+		
 		}
 
 		contextMenuContainer.show();
@@ -474,7 +478,7 @@ $(function() {
 
 	function closeChan(chan) {
 		var cmd = "/close";
-
+		
 		if (chan.hasClass("lobby")) {
 			cmd = "/quit";
 			var server = chan.find(".name").html();
