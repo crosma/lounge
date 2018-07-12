@@ -33,20 +33,6 @@ module.exports = function(irc, network) {
 		}
 		
 		if (data.nick === irc.user.nick) {
-			console.log('Is user');
-			
-			if (chan.name == '#main') {
-				console.log('Is main');
-				
-				const msg = new Msg({
-					time: Date.now(),
-					type: Msg.Type.ERROR,
-					text: "You may not leave #main.",
-				});
-				chan.pushMessage(client, msg);
-				return false;
-			}
-			
 			network.channels = _.without(network.channels, chan);
 			chan.destroy();
 			client.save();
