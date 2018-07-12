@@ -23,9 +23,9 @@ function fetch(callback) {
 	}
 
 	request.get({
-		uri: "https://api.github.com/repos/thelounge/lounge/releases",
+		uri: "https://api.github.com/repos/thelounge/thelounge/releases",
 		headers: {
-			Accept: "application/vnd.github.v3.html", // Request rendered markdown
+			"Accept": "application/vnd.github.v3.html", // Request rendered markdown
 			"User-Agent": pkg.name + "; +" + pkg.repository.git, // Identify the client
 		},
 	}, (error, response, body) => {
@@ -43,6 +43,7 @@ function fetch(callback) {
 		// Find the current release among releases on GitHub
 		for (i = 0; i < body.length; i++) {
 			release = body[i];
+
 			if (release.tag_name === versions.current.version) {
 				versions.current.changelog = release.body_html;
 				prerelease = release.prerelease;

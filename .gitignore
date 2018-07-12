@@ -1,7 +1,8 @@
 node_modules/
-npm-debug.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 package-lock.json
 
-.nyc_output/
 coverage/
 public/

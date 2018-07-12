@@ -29,8 +29,9 @@ describe("Chan", function() {
 	describe("#findMessage(id)", function() {
 		const chan = new Chan({
 			messages: [
-				new Msg(),
+				new Msg({id: 1}),
 				new Msg({
+					id: 2,
 					text: "Message to be found",
 				}),
 				new Msg(),
@@ -38,7 +39,7 @@ describe("Chan", function() {
 		});
 
 		it("should find a message in the list of messages", function() {
-			expect(chan.findMessage(1).text).to.equal("Message to be found");
+			expect(chan.findMessage(2).text).to.equal("Message to be found");
 		});
 
 		it("should not find a message that does not exist", function() {
@@ -82,15 +83,26 @@ describe("Chan", function() {
 	});
 
 	describe("#getSortedUsers(irc)", function() {
-		var getUserNames = function(chan) {
+		const getUserNames = function(chan) {
 			return chan.getSortedUsers(network).map((u) => u.nick);
 		};
+
+		it("returns unsorted list on null irc object", function() {
+			const chan = new Chan();
+			[
+				"JocelynD", "YaManicKill", "astorije", "xPaw", "Max-P",
+			].forEach((nick) => chan.setUser(new User({nick})));
+
+			expect(chan.getSortedUsers().map((u) => u.nick)).to.deep.equal([
+				"JocelynD", "YaManicKill", "astorije", "xPaw", "Max-P",
+			]);
+		});
 
 		it("should sort a simple user list", function() {
 			const chan = new Chan();
 			[
 				"JocelynD", "YaManicKill", "astorije", "xPaw", "Max-P",
-			].forEach((nick) => chan.setUser(new User({nick: nick}, prefixLookup)));
+			].forEach((nick) => chan.setUser(new User({nick}, prefixLookup)));
 
 			expect(getUserNames(chan)).to.deep.equal([
 				"astorije", "JocelynD", "Max-P", "xPaw", "YaManicKill",
@@ -127,7 +139,7 @@ describe("Chan", function() {
 			const chan = new Chan();
 			[
 				"aB", "Ad", "AA", "ac",
-			].forEach((nick) => chan.setUser(new User({nick: nick}, prefixLookup)));
+			].forEach((nick) => chan.setUser(new User({nick}, prefixLookup)));
 
 			expect(getUserNames(chan)).to.deep.equal(["AA", "aB", "ac", "Ad"]);
 		});
@@ -137,7 +149,7 @@ describe("Chan", function() {
 			[
 				"[foo", "]foo", "(foo)", "{foo}", "<foo>", "_foo", "@foo", "^foo",
 				"&foo", "!foo", "+foo", "Foo",
-			].forEach((nick) => chan.setUser(new User({nick: nick}, prefixLookup)));
+			].forEach((nick) => chan.setUser(new User({nick}, prefixLookup)));
 
 			expect(getUserNames(chan)).to.deep.equal([
 				"!foo", "&foo", "(foo)", "+foo", "<foo>", "@foo", "[foo", "]foo",
@@ -164,6 +176,7 @@ describe("Chan", function() {
 				"key",
 				"messages",
 				"name",
+				"state",
 				"topic",
 				"type",
 				"unread",

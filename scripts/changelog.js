@@ -46,7 +46,7 @@ node scripts/changelog <version>
 "use strict";
 
 const _ = require("lodash");
-const colors = require("colors/safe");
+const colors = require("chalk");
 const fs = require("fs");
 const GraphQLClient = require("graphql-request").GraphQLClient;
 const moment = require("moment");
@@ -126,7 +126,7 @@ For more details, [see the full changelog](${items.fullChangelogUrl}) and [miles
 ### Changed
 
 ${_.isEmpty(items.dependencies) ? "" :
-		`- Update production dependencies to their latest versions, by [Greenkeeper](https://greenkeeper.io/) 🚀:
+		`- Update production dependencies to their latest versions:
 ${printDependencyList(items.dependencies)}`
 }
 
@@ -151,7 +151,7 @@ ${printList(items.documentation)}`
 }
 
 ${_.isEmpty(items.websiteDocumentation) ? "" :
-		`On the [website repository](https://github.com/thelounge/thelounge.github.io):
+		`On the [website repository](https://github.com/thelounge/thelounge.chat):
 
 ${printList(items.websiteDocumentation)}`
 }
@@ -160,15 +160,13 @@ ${printList(items.websiteDocumentation)}`
 
 ${printList(items.internals)}${
 	_.isEmpty(items.devDependencies) ? "" : `
-- Update development dependencies to their latest versions, by [Greenkeeper](https://greenkeeper.io/) 🚀:
+- Update development dependencies to their latest versions:
 ${printDependencyList(items.devDependencies)}`}
 
 @@@@@@@@@@@@@@@@@@@
 @@ UNCATEGORIZED @@
 @@@@@@@@@@@@@@@@@@@
-
-${printList(items.uncategorized)}
-`;
+${printUncategorizedList(items.uncategorized)}`;
 }
 
 // Returns true if the given version is a pre-release (i.e. 2.0.0-pre.3,
@@ -190,7 +188,7 @@ function stableVersion(prereleaseVersion) {
 
 // Generates a compare-view URL between 2 versions of The Lounge
 function fullChangelogUrl(v1, v2) {
-	return `https://github.com/thelounge/lounge/compare/v${v1}...v${v2}`;
+	return `https://github.com/thelounge/thelounge/compare/v${v1}...v${v2}`;
 }
 
 // This class is a facade to fetching details about commits / PRs / tags / etc.
@@ -278,7 +276,7 @@ class RepositoryFetcher {
 			if (commits.map(({oid}) => oid).includes(stopCommit.oid)) {
 				return _.takeWhile(commits, ({oid}) => oid !== stopCommit.oid);
 			} else if (pageInfo.hasNextPage) {
-				return commits.concat(await fetchPaginatedCommits(stopCommit, pageInfo.endCursor));
+				return commits.concat(await fetchPaginatedCommits(pageInfo.endCursor));
 			}
 
 			return commits;
@@ -399,6 +397,7 @@ function pullRequestNumbersInCommits(commits) {
 		if (pullRequestId) {
 			array.push(pullRequestId);
 		}
+
 		return array;
 	}, []);
 }
@@ -441,6 +440,7 @@ function printLine(entry) {
 	if (entry.title) {
 		return printPullRequest(entry);
 	}
+
 	return printCommit(entry);
 }
 
@@ -465,6 +465,22 @@ function printDependencyList(dependencies) {
 	return _.map(dependencies, (pullRequests, name) =>
 		`  - \`${name}\` (${pullRequests.map(printPullRequestLink).join(", ")})`
 	).join("\n");
+}
+
+function printUncategorizedList(uncategorized) {
+	return Object.entries(uncategorized).reduce((memo, [label, items]) => {
+		if (items.length === 0) {
+			return memo;
+		}
+
+		memo += `
+@@@@@ ${label.toUpperCase()}
+
+${printList(items)}
+`;
+
+		return memo;
+	}, "");
 }
 
 const dependencies = Object.keys(packageJson.dependencies);
@@ -500,10 +516,9 @@ function isSkipped(entry) {
 	return hasLabelOrAnnotatedComment(entry, "Meta: Skip Changelog");
 }
 
-// Greenkeeper PRs are listed in a special, more concise way in the changelog.
-// Returns true if the PR was open by Greenkeeper, false otherwise.
-function isDependency({author, labels}) {
-	return hasLabel(labels, "greenkeeper") || author.login === "greenkeeper";
+// Dependency update PRs are listed in a special, more concise way in the changelog.
+function isDependency({labels}) {
+	return hasLabel(labels, "Type: Dependencies");
 }
 
 function isDocumentation({labels}) {
@@ -520,6 +535,14 @@ function isDeprecation({labels}) {
 
 function isInternal(entry) {
 	return hasLabelOrAnnotatedComment(entry, "Meta: Internal");
+}
+
+function isBug({labels}) {
+	return hasLabel(labels, "Type: Bug");
+}
+
+function isFeature({labels}) {
+	return hasLabel(labels, "Type: Feature");
 }
 
 // Examples:
@@ -547,6 +570,7 @@ function parse(entries) {
 					if (!result[dependencyType][packageName]) {
 						result[dependencyType][packageName] = [];
 					}
+
 					result[dependencyType][packageName].push(entry);
 				} else {
 					log.info(`${colors.bold(packageName)} was updated in ${colors.green("#" + entry.number)} then removed since last release. Skipping.`);
@@ -561,8 +585,15 @@ function parse(entries) {
 		} else if (isInternal(entry)) {
 			result.internals.push(entry);
 		} else {
-			result.uncategorized.push(entry);
+			if (isFeature(entry)) {
+				result.uncategorized.feature.push(entry);
+			} else if (isBug(entry)) {
+				result.uncategorized.bug.push(entry);
+			} else {
+				result.uncategorized.other.push(entry);
+			}
 		}
+
 		return result;
 	}, {
 		skipped: [],
@@ -572,7 +603,11 @@ function parse(entries) {
 		documentation: [],
 		internals: [],
 		security: [],
-		uncategorized: [],
+		uncategorized: {
+			feature: [],
+			bug: [],
+			other: [],
+		},
 		unknownDependencies: new Set(),
 	});
 }
@@ -581,9 +616,10 @@ function parse(entries) {
 // (with format `@username`) of everyone who contributed to this version.
 function extractContributors(entries) {
 	const set = Object.values(entries).reduce((memo, pullRequest) => {
-		if (pullRequest.author.login !== "greenkeeper") {
+		if (pullRequest.author.login !== "greenkeeper" && pullRequest.author.login !== "renovate-bot") {
 			memo.add("@" + pullRequest.author.login);
 		}
+
 		return memo;
 	}, new Set());
 
@@ -605,7 +641,7 @@ async function generateChangelogEntry(targetVersion) {
 	let template;
 	let contributors = [];
 
-	const codeRepo = new RepositoryFetcher(client, "lounge");
+	const codeRepo = new RepositoryFetcher(client, "thelounge");
 	const previousVersion = await codeRepo.fetchPreviousVersion(targetVersion);
 
 	if (isPrerelease(targetVersion)) {
@@ -618,7 +654,7 @@ async function generateChangelogEntry(targetVersion) {
 		items.milestone = await codeRepo.fetchMilestone(targetVersion);
 		contributors = extractContributors(codeCommitsAndPullRequests);
 
-		const websiteRepo = new RepositoryFetcher(client, "thelounge.github.io");
+		const websiteRepo = new RepositoryFetcher(client, "thelounge.chat");
 		items.websiteDocumentation = await websiteRepo.fetchCommitsAndPullRequestsSince("v" + previousVersion);
 	}
 
@@ -667,6 +703,7 @@ async function addToChangelog(newEntry) {
 		} else {
 			log.error(error);
 		}
+
 		process.exit(1);
 	}
 
@@ -684,7 +721,7 @@ async function addToChangelog(newEntry) {
 	// Step 3 (optional): Print a list of skipped entries if there are any
 	if (skipped.length > 0) {
 		const pad = Math.max(...skipped.map((entry) => (entry.title || entry.messageHeadline).length));
-		log.warn(`${skipped.length} entries were skipped:`);
+		log.warn(`${skipped.length} ${skipped.length > 1 ? "entries were" : "entry was"} skipped:`);
 		skipped.forEach((entry) => {
 			log.warn(`- ${(entry.title || entry.messageHeadline).padEnd(pad)}  ${colors.gray(entry.url)}`);
 		});
@@ -692,6 +729,7 @@ async function addToChangelog(newEntry) {
 
 	// Step 4: Print out some information about what just happened to the console
 	const commitCommand = `git commit -m 'Add changelog entry for v${version}' CHANGELOG.md`;
+
 	if (isPrerelease(version)) {
 		log.info(`You can now run: ${colors.bold(commitCommand)}`);
 	} else {

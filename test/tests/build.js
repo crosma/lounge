@@ -8,12 +8,13 @@ describe("public folder", function() {
 	const publicFolder = path.join(__dirname, "..", "..", "public");
 
 	it("font awesome files are copied", function() {
-		expect(fs.existsSync(path.join(publicFolder, "fonts", "fontawesome-webfont.woff"))).to.be.true;
-		expect(fs.existsSync(path.join(publicFolder, "fonts", "fontawesome-webfont.woff2"))).to.be.true;
+		expect(fs.existsSync(path.join(publicFolder, "fonts", "fa-solid-900.woff"))).to.be.true;
+		expect(fs.existsSync(path.join(publicFolder, "fonts", "fa-solid-900.woff2"))).to.be.true;
 	});
 
-	it("index.html is copied", function() {
-		expect(fs.existsSync(path.join(publicFolder, "index.html"))).to.be.true;
+	it("index HTML file is not copied", function() {
+		expect(fs.existsSync(path.join(publicFolder, "index.html"))).to.be.false;
+		expect(fs.existsSync(path.join(publicFolder, "index.html.tpl"))).to.be.false;
 	});
 
 	it("javascript files are built", function() {

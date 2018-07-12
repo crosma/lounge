@@ -1,8 +1,8 @@
 "use strict";
 
-var _ = require("lodash");
-var Msg = require("../../models/msg");
-var Chan = require("../../models/chan");
+const _ = require("lodash");
+const Msg = require("../../models/msg");
+const Chan = require("../../models/chan");
 const Helper = require("../../helper");
 
 exports.commands = ["close", "leave", "part"];
@@ -27,20 +27,22 @@ exports.input = function(network, chan, cmd, args) {
 		return;
 	}
 
-	if (target.type !== Chan.Type.CHANNEL || !network.irc || !network.irc.connection) {
+	
+
+	// If target is not a channel or we are not connected, instantly remove the channel
+	// Otherwise send part to the server and wait for response
+	if (target.type !== Chan.Type.CHANNEL
+	|| target.state === Chan.State.PARTED
+	|| !network.irc || !network.irc.connection || !network.irc.connection.connected) {
 		network.channels = _.without(network.channels, target);
 		target.destroy();
 		this.emit("part", {
 			chan: target.id,
 		});
-	}
 
-	if (target.type === Chan.Type.CHANNEL) {
 		this.save();
-
-		if (network.irc) {
-			network.irc.part(target.name, partMessage);
-		}
+	} else {
+		network.irc.part(target.name, partMessage);
 	}
 
 	return true;

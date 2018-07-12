@@ -1,8 +1,6 @@
 "use strict";
 
-var _ = require("lodash");
-
-var id = 0;
+const _ = require("lodash");
 
 class Msg {
 	constructor(attr) {
@@ -20,7 +18,7 @@ class Msg {
 
 		_.defaults(this, attr, {
 			from: {},
-			id: id++,
+			id: 0,
 			previews: [],
 			text: "",
 			type: Msg.Type.MESSAGE,
@@ -36,6 +34,23 @@ class Msg {
 
 	findPreview(link) {
 		return this.previews.find((preview) => preview.link === link);
+	}
+
+	isLoggable() {
+		if (this.type === Msg.Type.TOPIC) {
+			// Do not log topic that is sent on channel join
+			return !!this.from.nick;
+		}
+
+		return this.type !== Msg.Type.MOTD &&
+			this.type !== Msg.Type.ERROR &&
+			this.type !== Msg.Type.BANLIST &&
+			this.type !== Msg.Type.IGNORELIST &&
+			this.type !== "channel_list" &&
+			this.type !== "channel_list_loading" &&
+			this.type !== "channel_list_truncated" &&
+			this.type !== Msg.Type.TOPIC_SET_BY &&
+			this.type !== Msg.Type.WHOIS;
 	}
 }
 
@@ -56,11 +71,13 @@ Msg.Type = {
 	PART: "part",
 	QUIT: "quit",
 	CTCP: "ctcp",
+	CTCP_REQUEST: "ctcp_request",
 	CHGHOST: "chghost",
 	TOPIC: "topic",
 	TOPIC_SET_BY: "topic_set_by",
 	WHOIS: "whois",
 	BANLIST: "ban_list",
+	IGNORELIST: "ignore_list",
 };
 
 module.exports = Msg;

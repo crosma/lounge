@@ -24,11 +24,13 @@ socket.on("auth", function(data) {
 		utils.serverHash = data.serverHash;
 
 		login.html(templates.windows.sign_in());
-		
+
+		utils.togglePasswordField("#sign-in .reveal-password");
+
 		login.find("form").on("submit", function() {
 			const form = $(this);
 
-			form.find(".btn").attr("disabled", true);
+			form.find(".btn").prop("disabled", true);
 
 			const values = {};
 			$.each(form.serializeArray(), function(i, obj) {
@@ -88,12 +90,8 @@ socket.on("auth", function(data) {
 
 		if (token) {
 			$("#loading-page-message, #connection-error").text("Authorizing…");
-
-			socket.emit("auth", {
-				user: user,
-				token: token,
-				lastMessage: utils.lastMessageId,
-			});
+			const lastMessage = utils.lastMessageId;
+			socket.emit("auth", {user, token, lastMessage});
 		}
 	}
 

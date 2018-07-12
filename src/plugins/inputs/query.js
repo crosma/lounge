@@ -1,13 +1,14 @@
 "use strict";
 
-var _ = require("lodash");
-var Chan = require("../../models/chan");
-var Msg = require("../../models/msg");
+const _ = require("lodash");
+const Chan = require("../../models/chan");
+const Msg = require("../../models/msg");
 
 exports.commands = ["query"];
 
 exports.input = function(network, chan, cmd, args) {
-	var target = args[0];
+	const target = args[0];
+
 	if (args.length === 0 || target.length === 0) {
 		chan.pushMessage(this, new Msg({
 			type: Msg.Type.ERROR,
@@ -16,13 +17,15 @@ exports.input = function(network, chan, cmd, args) {
 		return;
 	}
 
-	var query = _.find(network.channels, {name: target});
+	const query = _.find(network.channels, {name: target});
+
 	if (typeof query !== "undefined") {
 		return;
 	}
 
-	var char = target[0];
-	if (network.irc.network.options.CHANTYPES && network.irc.network.options.CHANTYPES.indexOf(char) !== -1) {
+	const char = target[0];
+
+	if (network.irc.network.options.CHANTYPES && network.irc.network.options.CHANTYPES.includes(char)) {
 		chan.pushMessage(this, new Msg({
 			type: Msg.Type.ERROR,
 			text: "You can not open query windows for channels, use /join instead.",
@@ -30,7 +33,7 @@ exports.input = function(network, chan, cmd, args) {
 		return;
 	}
 
-	for (var i = 0; i < network.irc.network.options.PREFIX.length; i++) {
+	for (let i = 0; i < network.irc.network.options.PREFIX.length; i++) {
 		if (network.irc.network.options.PREFIX[i].symbol === char) {
 			chan.pushMessage(this, new Msg({
 				type: Msg.Type.ERROR,
@@ -40,14 +43,17 @@ exports.input = function(network, chan, cmd, args) {
 		}
 	}
 
-	var newChan = new Chan({
+	const newChan = this.createChannel({
 		type: Chan.Type.QUERY,
 		name: target,
 	});
-	network.channels.push(newChan);
+
 	this.emit("join", {
-		network: network.id,
+		network: network.uuid,
 		chan: newChan.getFilteredClone(true),
 		shouldOpen: true,
+		index: network.addChannel(newChan),
 	});
+	this.save();
+	newChan.loadMessages(this, network);
 };

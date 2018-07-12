@@ -1,8 +1,9 @@
 "use strict";
 
+const log = require("../../log");
 const program = require("commander");
 const child = require("child_process");
-const colors = require("colors/safe");
+const colors = require("chalk");
 const fs = require("fs");
 const Helper = require("../../helper");
 const Utils = require("../utils");
@@ -24,11 +25,12 @@ program
 			return;
 		}
 
-		if (users.indexOf(name) === -1) {
+		if (!users.includes(name)) {
 			log.error(`User ${colors.bold(name)} does not exist.`);
 			return;
 		}
-		var child_spawn = child.spawn(
+
+		const child_spawn = child.spawn(
 			process.env.EDITOR || "vi",
 			[Helper.getUserConfigPath(name)],
 			{stdio: "inherit"}

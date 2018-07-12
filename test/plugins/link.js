@@ -14,7 +14,7 @@ describe("Link plugin", function() {
 	beforeEach(function(done) {
 		app = util.createWebserver();
 		app.get("/real-test-image.png", function(req, res) {
-			res.sendFile(path.resolve(__dirname, "../../client/img/apple-touch-icon-120x120.png"));
+			res.sendFile(path.resolve(__dirname, "../../client/img/logo-grey-bg-120x120px.png"));
 		});
 		this.connection = app.listen(9002, done);
 
@@ -72,7 +72,25 @@ describe("Link plugin", function() {
 		});
 
 		this.irc.once("msg:preview", function(data) {
-			expect(data.preview.head, "opengraph test");
+			expect(data.preview.head).to.equal("opengraph test");
+			done();
+		});
+	});
+
+	it("should find only the first matching tag", function(done) {
+		const message = this.irc.createMessage({
+			text: "http://localhost:9002/duplicate-tags",
+		});
+
+		link(this.irc, this.network.channels[0], message);
+
+		app.get("/duplicate-tags", function(req, res) {
+			res.send("<title>test</title><title>magnifying glass icon</title><meta name='description' content='desc1'><meta name='description' content='desc2'>");
+		});
+
+		this.irc.once("msg:preview", function(data) {
+			expect(data.preview.head).to.equal("test");
+			expect(data.preview.body).to.equal("desc1");
 			done();
 		});
 	});
@@ -265,5 +283,244 @@ describe("Link plugin", function() {
 				done();
 			}
 		});
+	});
+
+	it("should use client's preferred language as Accept-Language header", function(done) {
+		const language = "sv,en-GB;q=0.9,en;q=0.8";
+		this.irc.language = language;
+
+		app.get("/language-check", function(req, res) {
+			expect(req.headers["accept-language"]).to.equal(language);
+			res.send();
+			done();
+		});
+
+		const message = this.irc.createMessage({
+			text: "http://localhost:9002/language-check",
+		});
+
+		link(this.irc, this.network.channels[0], message);
+	});
+
+	it("should send accept text/html for initial request", function(done) {
+		app.get("/accept-header-html", function(req, res) {
+			expect(req.headers.accept).to.equal("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+			res.send();
+			done();
+		});
+
+		const message = this.irc.createMessage({
+			text: "http://localhost:9002/accept-header-html",
+		});
+
+		link(this.irc, this.network.channels[0], message);
+	});
+
+	it("should send accept */* for meta image", function(done) {
+		app.get("/accept-header-thumb", function(req, res) {
+			res.send("<title>404 image</title><meta property='og:image' content='http://localhost:9002/accept-header-thumb.png'>");
+		});
+
+		app.get("/accept-header-thumb.png", function(req, res) {
+			expect(req.headers.accept).to.equal("*/*");
+			res.send();
+			done();
+		});
+
+		const message = this.irc.createMessage({
+			text: "http://localhost:9002/accept-header-thumb",
+		});
+
+		link(this.irc, this.network.channels[0], message);
+	});
+
+	it("should not add slash to url", function(done) {
+		const message = this.irc.createMessage({
+			text: "http://localhost:9002",
+		});
+
+		link(this.irc, this.network.channels[0], message);
+
+		this.irc.once("msg:preview", function(data) {
+			expect(data.preview.link).to.equal("http://localhost:9002");
+			done();
+		});
+	});
+
+	it("should work on non-ASCII urls", function(done) {
+		const message = this.irc.createMessage({
+			text:
+			"http://localhost:9002/unicode/ıoı-test " +
+			"http://localhost:9002/unicode/русский-текст-test " +
+			"http://localhost:9002/unicode/🙈-emoji-test " +
+			"http://localhost:9002/unicodeq/?q=ıoı-test " +
+			"http://localhost:9002/unicodeq/?q=русский-текст-test " +
+			"http://localhost:9002/unicodeq/?q=🙈-emoji-test",
+		});
+
+		link(this.irc, this.network.channels[0], message);
+
+		app.get("/unicode/:q", function(req, res) {
+			res.send(`<title>${req.params.q}</title>`);
+		});
+
+		app.get("/unicodeq/", function(req, res) {
+			res.send(`<title>${req.query.q}</title>`);
+		});
+
+		const previews = [];
+
+		this.irc.on("msg:preview", function(data) {
+			previews.push(data.preview.link);
+
+			if (data.preview.link.includes("ıoı-test")) {
+				expect(data.preview.head).to.equal("ıoı-test");
+			} else if (data.preview.link.includes("русский-текст-test")) {
+				expect(data.preview.head).to.equal("русский-текст-test");
+			} else if (data.preview.link.includes("🙈-emoji-test")) {
+				expect(data.preview.head).to.equal("🙈-emoji-test");
+			} else {
+				expect("This should never happen").to.equal(data.preview.link);
+			}
+
+			if (previews.length === 5) {
+				expect(message.previews.map((preview) => preview.link)).to.have.members(previews);
+				done();
+			}
+		});
+	});
+
+	it("should fetch protocol-aware links", function(done) {
+		const message = this.irc.createMessage({
+			text: "//localhost:9002",
+		});
+
+		link(this.irc, this.network.channels[0], message);
+
+		this.irc.once("msg:preview", function(data) {
+			expect(data.preview.link).to.equal("http://localhost:9002");
+			done();
+		});
+	});
+
+	it("should de-duplicate links", function(done) {
+		const message = this.irc.createMessage({
+			text: "//localhost:9002 http://localhost:9002 http://localhost:9002",
+		});
+
+		link(this.irc, this.network.channels[0], message);
+
+		expect(message.previews).to.deep.equal([{
+			type: "loading",
+			head: "",
+			body: "",
+			thumb: "",
+			link: "http://localhost:9002",
+			shown: true,
+		}]);
+
+		this.irc.once("msg:preview", function(data) {
+			expect(data.preview.link).to.equal("http://localhost:9002");
+			done();
+		});
+	});
+
+	it("should not try to fetch links with wrong protocol", function() {
+		const message = this.irc.createMessage({
+			text: "ssh://example.com ftp://example.com irc://example.com http:////////example.com",
+		});
+
+		expect(message.previews).to.be.empty;
+	});
+
+	it("should not try to fetch links with username or password", function() {
+		const message = this.irc.createMessage({
+			text: "http://root:'some%pass'@hostname/database http://a:%p@c http://a:%p@example.com http://test@example.com",
+		});
+
+		expect(message.previews).to.be.empty;
+	});
+
+	it("should fetch same link only once at the same time", function(done) {
+		const message = this.irc.createMessage({
+			text: "http://localhost:9002/basic-og-once",
+		});
+
+		let requests = 0;
+		let responses = 0;
+
+		this.irc.language = "very nice language";
+
+		link(this.irc, this.network.channels[0], message);
+		link(this.irc, this.network.channels[0], message);
+		process.nextTick(() => link(this.irc, this.network.channels[0], message));
+
+		app.get("/basic-og-once", function(req, res) {
+			requests++;
+
+			expect(req.header("accept-language")).to.equal("very nice language");
+
+			// delay the request so it doesn't resolve immediately
+			setTimeout(() => {
+				res.send("<title>test prefetch</title>");
+			}, 100);
+		});
+
+		const cb = (data) => {
+			responses++;
+
+			expect(data.preview.head, "test prefetch");
+
+			if (responses === 3) {
+				this.irc.removeListener("msg:preview", cb);
+				expect(requests).to.equal(1);
+				done();
+			}
+		};
+
+		this.irc.on("msg:preview", cb);
+	});
+
+	it("should fetch same link with different languages multiple times", function(done) {
+		const message = this.irc.createMessage({
+			text: "http://localhost:9002/basic-og-once-lang",
+		});
+
+		const requests = [];
+		let responses = 0;
+
+		this.irc.language = "first language";
+		link(this.irc, this.network.channels[0], message);
+
+		setTimeout(() => {
+			this.irc.language = "second language";
+			link(this.irc, this.network.channels[0], message);
+		}, 100);
+
+		app.get("/basic-og-once-lang", function(req, res) {
+			requests.push(req.header("accept-language"));
+
+			// delay the request so it doesn't resolve immediately
+			setTimeout(() => {
+				res.send("<title>test prefetch</title>");
+			}, 100);
+		});
+
+		const cb = (data) => {
+			responses++;
+
+			expect(data.preview.head, "test prefetch");
+
+			if (responses === 2) {
+				this.irc.removeListener("msg:preview", cb);
+				expect(requests).to.deep.equal([
+					"first language",
+					"second language",
+				]);
+				done();
+			}
+		};
+
+		this.irc.on("msg:preview", cb);
 	});
 });

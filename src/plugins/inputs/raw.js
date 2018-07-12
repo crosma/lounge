@@ -4,7 +4,9 @@ const Msg = require("../../models/msg");
 
 exports.commands = ["raw", "send", "quote"];
 
-exports.input = function(network, chan, cmd, args) {
+
+exports.input = function({irc}, chan, cmd, args) {
+	/*
 	const lobby = network.channels[0];
 	const msg = new Msg({
 		type: Msg.Type.ERROR,
@@ -12,13 +14,12 @@ exports.input = function(network, chan, cmd, args) {
 		showInActive: true,
 	});
 	lobby.pushMessage(client, msg, true);
+	*/
 	
 	return false;
 		
 		
-	
 	if (args.length !== 0) {
-		var irc = network.irc;
 		irc.raw(args);
 	}
 

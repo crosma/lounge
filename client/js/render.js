@@ -10,6 +10,8 @@ const constants = require("./constants");
 const condensed = require("./condensed");
 const JoinChannel = require("./join-channel");
 const helpers_parse = require("./libs/handlebars/parse");
+const Userlist = require("./userlist");
+const storage = require("./localStorage");
 
 const chat = $("#chat");
 const sidebar = $("#sidebar");
@@ -57,7 +59,7 @@ function appendMessage(container, chanId, chanType, msg) {
 
 	// If current window is not a channel or this message is not condensable,
 	// then just append the message to container and be done with it
-	if (constants.condensedTypes.indexOf(msg.type) === -1 || chanType !== "channel") {
+	if (msg.self || msg.highlight || constants.condensedTypes.indexOf(msg.type) === -1 || chanType !== "channel") {
 		container.append(renderedMessage);
 		return;
 	}
@@ -93,8 +95,7 @@ function buildChatMessage(msg) {
 		msg.highlight = true;
 	}
 
-	if (constants.actionTypes.indexOf(type) !== -1) {
-		msg.template = "actions/" + type;
+	if (typeof templates.actions[type] !== "undefined") {
 		template = "msg_action";
 	} else if (type === "unhandled") {
 		template = "msg_unhandled";
@@ -118,7 +119,9 @@ function renderChannel(data) {
 	renderChannelMessages(data);
 
 	if (data.type === "channel") {
-		renderChannelUsers(data);
+		const users = renderChannelUsers(data);
+
+		Userlist.handleKeybinds(users.find(".search"));
 	}
 
 	if (historyObserver) {
@@ -155,15 +158,20 @@ function renderUnreadMarker(template, firstUnread, channel) {
 }
 
 function renderChannelUsers(data) {
-	const users = chat.find("#chan-" + data.id).find(".users");
+	const users = chat.find("#chan-" + data.id).find(".userlist");
 	const nicks = data.users
 		.concat() // Make a copy of the user list, sort is applied in-place
 		.sort((a, b) => b.lastMessage - a.lastMessage)
 		.map((a) => a.nick);
 
+	// Before re-rendering the list of names, there might have been an entry
+	// marked as active (i.e. that was highlighted by keyboard navigation).
+	// It is `undefined` if there was none.
+	const previouslyActive = users.find(".active");
+
 	const search = users
 		.find(".search")
-		.attr("placeholder", nicks.length + " " + (nicks.length === 1 ? "user" : "users"));
+		.prop("placeholder", nicks.length + " " + (nicks.length === 1 ? "user" : "users"));
 
 	users
 		.data("nicks", nicks)
@@ -174,21 +182,38 @@ function renderChannelUsers(data) {
 	if (search.val().length) {
 		search.trigger("input");
 	}
+
+	// If a nick was highlighted before re-rendering the lists, re-highlight it in
+	// the newly-rendered list.
+	if (previouslyActive.length > 0) {
+		// We need to un-highlight everything first because triggering `input` with
+		// a value highlights the first entry.
+		users.find(".user").removeClass("active");
+		users.find(`.user[data-name="${previouslyActive.attr("data-name")}"]`).addClass("active");
+	}
+
+	return users;
 }
 
 function renderNetworks(data, singleNetwork) {
+	const collapsed = new Set(JSON.parse(storage.get("thelounge.networks.collapsed")));
+
 	sidebar.find(".empty").hide();
 	sidebar.find(".networks").append(
 		templates.network({
 			networks: data.networks,
-		})
+		}).trim()
 	);
 
 	// Add keyboard handlers to the "Join a channel…" form inputs/button
-	JoinChannel.handleKeybinds();
+	JoinChannel.handleKeybinds(data.networks);
 
 	let newChannels;
 	const channels = $.map(data.networks, function(n) {
+		if (collapsed.has(n.uuid)) {
+			collapseNetwork($(`.network[data-uuid="${n.uuid}"] button.collapse-network`));
+		}
+
 		return n.channels;
 	});
 
@@ -204,7 +229,7 @@ function renderNetworks(data, singleNetwork) {
 						.data("needsNamesRefresh", true)
 						.find(".header .topic")
 						.html(helpers_parse(channel.topic))
-						.attr("title", channel.topic);
+						.prop("title", channel.topic);
 				}
 
 				if (channel.messages.length > 0) {
@@ -218,7 +243,7 @@ function renderNetworks(data, singleNetwork) {
 						container.find(".show-more").addClass("show");
 					}
 
-					container.trigger("keepToBottom");
+					container.parent().trigger("keepToBottom");
 				}
 			} else {
 				newChannels.push(channel);
@@ -228,19 +253,21 @@ function renderNetworks(data, singleNetwork) {
 		newChannels = channels;
 	}
 
-	chat.append(
-		templates.chat({
-			channels: channels,
-		})
-	);
+	if (newChannels.length > 0) {
+		chat.append(
+			templates.chat({
+				channels: newChannels,
+			})
+		);
 
-	newChannels.forEach((channel) => {
-		renderChannel(channel);
+		newChannels.forEach((channel) => {
+			renderChannel(channel);
 
-		if (channel.type === "channel") {
-			chat.find("#chan-" + channel.id).data("needsNamesRefresh", true);
-		}
-	});
+			if (channel.type === "channel") {
+				chat.find("#chan-" + channel.id).data("needsNamesRefresh", true);
+			}
+		});
+	}
 
 	utils.confirmExit();
 	sorting();
@@ -275,12 +302,41 @@ function loadMoreHistory(entries) {
 			return;
 		}
 
-		var target = $(entry.target).find(".show-more-button");
+		const target = $(entry.target).find("button");
 
-		if (target.attr("disabled")) {
+		if (target.prop("disabled")) {
 			return;
 		}
 
-		target.click();
+		target.trigger("click");
 	});
+}
+
+sidebar.on("click", "button.collapse-network", (e) => collapseNetwork($(e.target)));
+
+function collapseNetwork(target) {
+	const collapseButton = target.closest(".collapse-network");
+	const networks = new Set(JSON.parse(storage.get("thelounge.networks.collapsed")));
+	const networkuuid = collapseButton.closest(".network").data("uuid");
+
+	if (collapseButton.closest(".network").find(".active").length > 0) {
+		collapseButton.closest(".lobby").trigger("click", {
+			keepSidebarOpen: true,
+		});
+	}
+
+	collapseButton.closest(".network").toggleClass("collapsed");
+
+	if (collapseButton.attr("aria-expanded") === "true") {
+		collapseButton.attr("aria-expanded", false);
+		collapseButton.attr("aria-label", "Expand");
+		networks.add(networkuuid);
+	} else {
+		collapseButton.attr("aria-expanded", true);
+		collapseButton.attr("aria-label", "Collapse");
+		networks.delete(networkuuid);
+	}
+
+	storage.set("thelounge.networks.collapsed", JSON.stringify([...networks]));
+	return false;
 }

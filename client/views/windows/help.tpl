@@ -18,30 +18,30 @@
 		{{#if gitCommit}}
 			<p>
 				The Lounge is running from source
-				(<a href="https://github.com/thelounge/lounge/tree/{{gitCommit}}" target="_blank" rel="noopener">commit <code>{{gitCommit}}</code></a>).
+				(<a href="https://github.com/thelounge/thelounge/tree/{{gitCommit}}" target="_blank" rel="noopener">commit <code>{{gitCommit}}</code></a>).
 			</p>
 
 			<ul>
 				<li>
 					Compare
-					<a href="https://github.com/thelounge/lounge/compare/{{gitCommit}}...master" target="_blank" rel="noopener">between <code>{{gitCommit}}</code> and <code>master</code></a>
+					<a href="https://github.com/thelounge/thelounge/compare/{{gitCommit}}...master" target="_blank" rel="noopener">between <code>{{gitCommit}}</code> and <code>master</code></a>
 					to see what you are missing
 				</li>
 				<li>
 					Compare
-					<a href="https://github.com/thelounge/lounge/compare/{{version}}...{{gitCommit}}" target="_blank" rel="noopener">between <code>{{version}}</code> and <code>{{gitCommit}}</code></a>
+					<a href="https://github.com/thelounge/thelounge/compare/{{version}}...{{gitCommit}}" target="_blank" rel="noopener">between <code>{{version}}</code> and <code>{{gitCommit}}</code></a>
 					to see your local changes</li>
 			</ul>
 		{{/if}}
 
 		<p>
-			<a href="https://thelounge.github.io/" target="_blank" rel="noopener" class="website-link">Website</a>
+			<a href="https://thelounge.chat/" target="_blank" rel="noopener" class="website-link">Website</a>
 		</p>
 		<p>
-			<a href="https://thelounge.github.io/docs/" target="_blank" rel="noopener" class="documentation-link">Documentation</a>
+			<a href="https://thelounge.chat/docs/" target="_blank" rel="noopener" class="documentation-link">Documentation</a>
 		</p>
 		<p>
-			<a href="https://github.com/thelounge/lounge/issues/new" target="_blank" rel="noopener" class="report-issue-link">Report an issue…</a>
+			<a href="https://github.com/thelounge/thelounge/issues/new" target="_blank" rel="noopener" class="report-issue-link">Report an issue…</a>
 		</p>
 	</div>
 
@@ -49,16 +49,48 @@
 
 	<div class="help-item">
 		<div class="subject">
-			<kbd class="key-all">Ctrl</kbd><kbd class="key-apple">⌘</kbd> + <kbd>↑</kbd> / <kbd>↓</kbd>
+			<span class="key-all"><kbd>Alt</kbd> <kbd>Shift</kbd> <kbd>↓</kbd></span>
+			<span class="key-apple"><kbd>⌥</kbd> <kbd>⇧</kbd> <kbd>↓</kbd></span>
 		</div>
 		<div class="description">
-			<p>Switch to the previous/next window in the channel list.</p>
+			<p>Switch to the next lobby in the channel list.</p>
 		</div>
 	</div>
 
 	<div class="help-item">
 		<div class="subject">
-			<kbd class="key-all">Ctrl</kbd><kbd class="key-apple">⌘</kbd> + <kbd>K</kbd>
+			<span class="key-all"><kbd>Alt</kbd> <kbd>Shift</kbd> <kbd>↑</kbd></span>
+			<span class="key-apple"><kbd>⌥</kbd> <kbd>⇧</kbd> <kbd>↑</kbd></span>
+		</div>
+		<div class="description">
+			<p>Switch to the previous lobby in the channel list.</p>
+		</div>
+	</div>
+
+	<div class="help-item">
+		<div class="subject">
+			<span class="key-all"><kbd>Alt</kbd> <kbd>↓</kbd></span>
+			<span class="key-apple"><kbd>⌥</kbd> <kbd>↓</kbd></span>
+		</div>
+		<div class="description">
+			<p>Switch to the next window in the channel list.</p>
+		</div>
+	</div>
+
+	<div class="help-item">
+		<div class="subject">
+			<span class="key-all"><kbd>Alt</kbd> <kbd>↑</kbd></span>
+			<span class="key-apple"><kbd>⌥</kbd> <kbd>↑</kbd></span>
+		</div>
+		<div class="description">
+			<p>Switch to the previous window in the channel list.</p>
+		</div>
+	</div>
+
+	<div class="help-item">
+		<div class="subject">
+			<span class="key-all"><kbd>Ctrl</kbd> <kbd>K</kbd></span>
+			<span class="key-apple"><kbd>⌘</kbd> <kbd>K</kbd></span>
 		</div>
 		<div class="description">
 			<p>
@@ -81,52 +113,58 @@
 
 	<div class="help-item">
 		<div class="subject">
-			<kbd class="key-all">Ctrl</kbd><kbd class="key-apple">⌘</kbd> + <kbd>B</kbd>
+			<span class="key-all"><kbd>Ctrl</kbd> <kbd>B</kbd></span>
+			<span class="key-apple"><kbd>⌘</kbd> <kbd>B</kbd></span>
 		</div>
 		<div class="description">
-			<p>Mark all text typed after this shortcut as bold.</p>
+			<p>Mark all text typed after this shortcut as <span class="irc-bold">bold</span>.</p>
 		</div>
 	</div>
 
 	<div class="help-item">
 		<div class="subject">
-			<kbd class="key-all">Ctrl</kbd><kbd class="key-apple">⌘</kbd> + <kbd>U</kbd>
+			<span class="key-all"><kbd>Ctrl</kbd> <kbd>U</kbd></span>
+			<span class="key-apple"><kbd>⌘</kbd> <kbd>U</kbd></span>
 		</div>
 		<div class="description">
-			<p>Mark all text typed after this shortcut as underlined.</p>
+			<p>Mark all text typed after this shortcut as <span class="irc-underline">underlined</span>.</p>
 		</div>
 	</div>
 
 	<div class="help-item">
 		<div class="subject">
-			<kbd class="key-all">Ctrl</kbd><kbd class="key-apple">⌘</kbd> + <kbd>I</kbd>
+			<span class="key-all"><kbd>Ctrl</kbd> <kbd>I</kbd></span>
+			<span class="key-apple"><kbd>⌘</kbd> <kbd>I</kbd></span>
 		</div>
 		<div class="description">
-			<p>Mark all text typed after this shortcut as italics.</p>
+			<p>Mark all text typed after this shortcut as <span class="irc-italic">italics</span>.</p>
 		</div>
 	</div>
 
 	<div class="help-item">
 		<div class="subject">
-			<kbd class="key-all">Ctrl</kbd><kbd class="key-apple">⌘</kbd> + <kbd>S</kbd>
+			<span class="key-all"><kbd>Ctrl</kbd> <kbd>S</kbd></span>
+			<span class="key-apple"><kbd>⌘</kbd> <kbd>S</kbd></span>
 		</div>
 		<div class="description">
-			<p>Mark all text typed after this shortcut as struck through.</p>
+			<p>Mark all text typed after this shortcut as <span class="irc-strikethrough">struck through</span>.</p>
 		</div>
 	</div>
 
 	<div class="help-item">
 		<div class="subject">
-			<kbd class="key-all">Ctrl</kbd><kbd class="key-apple">⌘</kbd> + <kbd>M</kbd>
+			<span class="key-all"><kbd>Ctrl</kbd> <kbd>M</kbd></span>
+			<span class="key-apple"><kbd>⌘</kbd> <kbd>M</kbd></span>
 		</div>
 		<div class="description">
-			<p>Mark all text typed after this shortcut as monospaced.</p>
+			<p>Mark all text typed after this shortcut as <span class="irc-monospace">monospaced</span>.</p>
 		</div>
 	</div>
 
 	<div class="help-item">
 		<div class="subject">
-			<kbd class="key-all">Ctrl</kbd><kbd class="key-apple">⌘</kbd> + <kbd>O</kbd>
+			<span class="key-all"><kbd>Ctrl</kbd> <kbd>O</kbd></span>
+			<span class="key-apple"><kbd>⌘</kbd> <kbd>O</kbd></span>
 		</div>
 		<div class="description">
 			<p>
@@ -324,6 +362,26 @@
 
 	<div class="help-item">
 		<div class="subject">
+			<code>/ignore nick</code>
+		</div>
+		<div class="description">
+			<p>
+				Block any messages from the specified user on the current network.
+				This can be a nickname or a hostmask.</p>
+		</div>
+	</div>
+
+	<div class="help-item">
+		<div class="subject">
+			<code>/ignorelist</code>
+		</div>
+		<div class="description">
+			<p>Load the list of ignored users for the current network.</p>
+		</div>
+	</div>
+
+	<div class="help-item">
+		<div class="subject">
 			<code>/join channel</code>
 		</div>
 		<div class="description">
@@ -482,10 +540,14 @@
 
 	<div class="help-item">
 		<div class="subject">
-			<code>/topic newtopic</code>
+			<code>/topic [newtopic]</code>
 		</div>
 		<div class="description">
-			<p>Set the topic in the current channel.</p>
+			<p>
+				Get the topic in the current channel. 
+				If <code>newtopic</code> is specified, sets the 
+				topic in the current channel.
+			</p>
 		</div>
 	</div>
 
@@ -495,6 +557,17 @@
 		</div>
 		<div class="description">
 			<p>Unban (<code>-b</code>) a user from the current channel.
+				This can be a nickname or a hostmask.</p>
+		</div>
+	</div>
+
+	<div class="help-item">
+		<div class="subject">
+			<code>/unignore nick</code>
+		</div>
+		<div class="description">
+			<p>
+				Unblock messages from the specified user on the current network.
 				This can be a nickname or a hostmask.</p>
 		</div>
 	</div>

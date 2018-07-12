@@ -5,11 +5,13 @@ const Chan = require("../../src/models/chan");
 const Msg = require("../../src/models/msg");
 const User = require("../../src/models/user");
 const Network = require("../../src/models/network");
+const Helper = require("../../src/helper");
 
 describe("Network", function() {
 	describe("#export()", function() {
 		it("should produce an valid object", function() {
-			var network = new Network({
+			const network = new Network({
+				uuid: "hello world",
 				awayMessage: "I am away",
 				name: "networkName",
 				channels: [
@@ -24,11 +26,13 @@ describe("Network", function() {
 			network.setNick("chillin`");
 
 			expect(network.export()).to.deep.equal({
+				uuid: "hello world",
 				awayMessage: "I am away",
 				name: "networkName",
 				host: "",
 				port: 6667,
 				tls: false,
+				rejectUnauthorized: false,
 				password: "",
 				username: "",
 				realname: "",
@@ -41,12 +45,119 @@ describe("Network", function() {
 					{name: "&foobar", key: ""},
 					{name: "#secret", key: "foo"},
 					{name: "&secure", key: "bar"},
+					{name: "PrivateChat", type: "query"},
 				],
+				ignoreList: [],
 			});
 		});
 
+		it("validate should set correct defaults", function() {
+			Helper.config.defaults.nick = "";
+
+			const network = new Network({
+				host: "localhost",
+			});
+
+			expect(network.validate()).to.be.true;
+			expect(network.nick).to.equal("thelounge");
+			expect(network.username).to.equal("thelounge");
+			expect(network.realname).to.equal("The Lounge User");
+			expect(network.port).to.equal(6667);
+
+			const network2 = new Network({
+				host: "localhost",
+				nick: "@Invalid Nick?",
+			});
+			expect(network2.validate()).to.be.true;
+			expect(network2.username).to.equal("InvalidNick");
+		});
+
+		it("lockNetwork should be enforced when validating", function() {
+			Helper.config.lockNetwork = true;
+			Helper.config.public = false;
+
+			const network = new Network({
+				host: "",
+				port: 1337,
+				tls: false,
+				rejectUnauthorized: false,
+			});
+			expect(network.validate()).to.be.true;
+			expect(network.host).to.equal("chat.freenode.net");
+			expect(network.port).to.equal(6697);
+			expect(network.tls).to.be.true;
+			expect(network.rejectUnauthorized).to.be.true;
+
+			Helper.config.public = true;
+
+			const network2 = new Network({
+				host: "some.fake.tld",
+			});
+			expect(network2.validate()).to.be.true;
+			expect(network2.host).to.equal("chat.freenode.net");
+
+			Helper.config.lockNetwork = false;
+			Helper.config.public = false;
+		});
+
+		it("editing a network should enforce correct types", function() {
+			let saveCalled = false;
+
+			const network = new Network();
+			network.edit({
+				save() {
+					saveCalled = true;
+				},
+			}, {
+				nick: "newNick",
+				host: "new.tld",
+				name: "Lounge Test Network",
+				port: "1337",
+				tls: undefined,
+				rejectUnauthorized: undefined,
+				username: 1234,
+				password: 4567,
+				realname: 8901,
+				commands: "/command 1 2 3\r\n/ping HELLO\r\r\r\r/whois test\r\n\r\n",
+				ip: "newIp",
+				hostname: "newHostname",
+				guid: "newGuid",
+			});
+
+			expect(saveCalled).to.be.true;
+			expect(network.guid).to.not.equal("newGuid");
+			expect(network.ip).to.be.null;
+			expect(network.hostname).to.be.null;
+
+			expect(network.name).to.equal("Lounge Test Network");
+			expect(network.channels[0].name).to.equal("Lounge Test Network");
+
+			expect(network.nick).to.equal("newNick");
+			expect(network.host).to.equal("new.tld");
+			expect(network.port).to.equal(1337);
+			expect(network.tls).to.be.false;
+			expect(network.rejectUnauthorized).to.be.false;
+			expect(network.username).to.equal("1234");
+			expect(network.password).to.equal("4567");
+			expect(network.realname).to.equal("8901");
+			expect(network.commands).to.deep.equal([
+				"/command 1 2 3",
+				"/ping HELLO",
+				"/whois test",
+			]);
+		});
+
+		it("should generate uuid (v4) for each network", function() {
+			const network1 = new Network();
+			const network2 = new Network();
+
+			expect(network1.uuid).to.have.lengthOf(36);
+			expect(network2.uuid).to.have.lengthOf(36);
+			expect(network1.uuid).to.not.equal(network2.uuid);
+		});
+
 		it("lobby should be at the top", function() {
-			var network = new Network({
+			const network = new Network({
 				name: "Super Nice Network",
 				channels: [
 					new Chan({name: "AAAA!", type: Chan.Type.QUERY}),
@@ -61,7 +172,7 @@ describe("Network", function() {
 		});
 
 		it("should maintain channel reference", function() {
-			var chan = new Chan({
+			const chan = new Chan({
 				name: "#506-bug-fix",
 				messages: [
 					new Msg({
@@ -70,7 +181,7 @@ describe("Network", function() {
 				],
 			});
 
-			var network = new Network({
+			const network = new Network({
 				name: "networkName",
 				channels: [
 					chan,
@@ -108,21 +219,219 @@ describe("Network", function() {
 
 		it("should keep necessary properties", function() {
 			const network = new Network();
+			const clone = network.getFilteredClone();
 
-			expect(network.getFilteredClone()).to.be.an("object").that.has.all.keys(
+			expect(clone).to.be.an("object").that.has.all.keys(
 				"channels",
 				"commands",
 				"host",
 				"hostname",
-				"id",
 				"ip",
 				"name",
 				"port",
 				"realname",
 				"serverOptions",
+				"status",
 				"tls",
+				"rejectUnauthorized",
+				"uuid",
 				"username"
 			);
+
+			expect(clone.status).to.be.an("object").that.has.all.keys(
+				"connected",
+				"secure"
+			);
+		});
+	});
+
+	describe("#addChannel(newChan)", function() {
+		it("should add channel", function() {
+			const chan = new Chan({name: "#thelounge"});
+
+			const network = new Network({
+				channels: [
+					chan,
+				],
+			});
+			// Lobby and initial channel
+			expect(network.channels.length).to.equal(2);
+
+			const newChan = new Chan({name: "#freenode"});
+			network.addChannel(newChan);
+
+			expect(network.channels.length).to.equal(3);
+		});
+
+		it("should add channel alphabetically", function() {
+			const chan1 = new Chan({name: "#abc"});
+			const chan2 = new Chan({name: "#thelounge"});
+			const chan3 = new Chan({name: "#zero"});
+
+			const network = new Network({
+				channels: [
+					chan1,
+					chan2,
+					chan3,
+				],
+				name: "freenode",
+			});
+
+			const newChan = new Chan({name: "#freenode"});
+			network.addChannel(newChan);
+
+			expect(network.channels[0].name).to.equal("freenode");
+			expect(network.channels[1]).to.equal(chan1);
+			expect(network.channels[2]).to.equal(newChan);
+			expect(network.channels[3]).to.equal(chan2);
+			expect(network.channels[4]).to.equal(chan3);
+		});
+
+		it("should sort case-insensitively", function() {
+			const chan1 = new Chan({name: "#abc"});
+			const chan2 = new Chan({name: "#THELOUNGE"});
+
+			const network = new Network({
+				channels: [
+					chan1,
+					chan2,
+				],
+			});
+
+			const newChan = new Chan({name: "#freenode"});
+			network.addChannel(newChan);
+
+			expect(network.channels[1]).to.equal(chan1);
+			expect(network.channels[2]).to.equal(newChan);
+			expect(network.channels[3]).to.equal(chan2);
+		});
+
+		it("should sort users separately from channels", function() {
+			const chan1 = new Chan({name: "#abc"});
+			const chan2 = new Chan({name: "#THELOUNGE"});
+
+			const network = new Network({
+				channels: [
+					chan1,
+					chan2,
+				],
+			});
+
+			const newUser = new Chan({name: "mcinkay", type: Chan.Type.QUERY});
+			network.addChannel(newUser);
+
+			expect(network.channels[1]).to.equal(chan1);
+			expect(network.channels[2]).to.equal(chan2);
+			expect(network.channels[3]).to.equal(newUser);
+		});
+
+		it("should sort users alphabetically", function() {
+			const chan1 = new Chan({name: "#abc"});
+			const chan2 = new Chan({name: "#THELOUNGE"});
+			const user1 = new Chan({name: "astorije", type: Chan.Type.QUERY});
+			const user2 = new Chan({name: "xpaw", type: Chan.Type.QUERY});
+
+			const network = new Network({
+				channels: [
+					chan1,
+					chan2,
+					user1,
+					user2,
+				],
+			});
+
+			const newUser = new Chan({name: "mcinkay", type: Chan.Type.QUERY});
+			network.addChannel(newUser);
+
+			expect(network.channels[1]).to.equal(chan1);
+			expect(network.channels[2]).to.equal(chan2);
+			expect(network.channels[3]).to.equal(user1);
+			expect(network.channels[4]).to.equal(newUser);
+			expect(network.channels[5]).to.equal(user2);
+		});
+
+		it("should not sort special channels", function() {
+			const chan1 = new Chan({name: "#abc"});
+			const chan2 = new Chan({name: "#THELOUNGE"});
+			const user1 = new Chan({name: "astorije", type: Chan.Type.QUERY});
+			const user2 = new Chan({name: "xpaw", type: Chan.Type.QUERY});
+
+			const network = new Network({
+				channels: [
+					chan1,
+					chan2,
+					user1,
+					user2,
+				],
+			});
+
+			const newBanlist = new Chan({name: "Banlist for #THELOUNGE", type: Chan.Type.SPECIAL});
+			network.addChannel(newBanlist);
+
+			expect(network.channels[1]).to.equal(chan1);
+			expect(network.channels[2]).to.equal(chan2);
+			expect(network.channels[3]).to.equal(user1);
+			expect(network.channels[4]).to.equal(user2);
+			expect(network.channels[5]).to.equal(newBanlist);
+		});
+
+		it("should not compare against special channels", function() {
+			const chan1 = new Chan({name: "#abc"});
+			const chan2 = new Chan({name: "#THELOUNGE"});
+			const user1 = new Chan({name: "astorije", type: Chan.Type.QUERY});
+
+			const network = new Network({
+				channels: [
+					chan1,
+					chan2,
+					user1,
+				],
+			});
+
+			const newBanlist = new Chan({name: "Banlist for #THELOUNGE", type: Chan.Type.SPECIAL});
+			network.addChannel(newBanlist);
+			const newUser = new Chan({name: "mcinkay", type: Chan.Type.QUERY});
+			network.addChannel(newUser);
+
+			expect(network.channels[1]).to.equal(chan1);
+			expect(network.channels[2]).to.equal(chan2);
+			expect(network.channels[3]).to.equal(user1);
+			expect(network.channels[4]).to.equal(newUser);
+			expect(network.channels[5]).to.equal(newBanlist);
+		});
+
+		it("should insert before first special channel", function() {
+			const banlist = new Chan({name: "Banlist for #THELOUNGE", type: Chan.Type.SPECIAL});
+			const chan1 = new Chan({name: "#thelounge"});
+			const user1 = new Chan({name: "astorije", type: Chan.Type.QUERY});
+
+			const network = new Network({
+				channels: [
+					banlist,
+					chan1,
+					user1,
+				],
+			});
+
+			const newChan = new Chan({name: "#freenode"});
+			network.addChannel(newChan);
+
+			expect(network.channels[1]).to.equal(newChan);
+			expect(network.channels[2]).to.equal(banlist);
+			expect(network.channels[3]).to.equal(chan1);
+			expect(network.channels[4]).to.equal(user1);
+		});
+
+		it("should never add something in front of the lobby", function() {
+			const network = new Network({
+				name: "freenode",
+				channels: [],
+			});
+
+			const newUser = new Chan({name: "astorije"});
+			network.addChannel(newUser);
+
+			expect(network.channels[1]).to.equal(newUser);
 		});
 	});
 });

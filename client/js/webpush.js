@@ -11,7 +11,7 @@ let applicationServerKey;
 if ("serviceWorker" in navigator) {
 	navigator.serviceWorker.addEventListener("message", (event) => {
 		if (event.data && event.data.type === "open") {
-			$("#sidebar").find(`.chan[data-target="#${event.data.channel}"]`).click();
+			$("#sidebar").find(`.chan[data-target="#${event.data.channel}"]`).trigger("click");
 		}
 	});
 }
@@ -24,14 +24,14 @@ module.exports.configurePushNotifications = (subscribedOnServer, key) => {
 	// If client has push registration but the server knows nothing about it,
 	// this subscription is broken and client has to register again
 	if (clientSubscribed === true && subscribedOnServer === false) {
-		pushNotificationsButton.attr("disabled", true);
+		pushNotificationsButton.prop("disabled", true);
 
 		navigator.serviceWorker.ready
 			.then((registration) => registration.pushManager.getSubscription())
 			.then((subscription) => subscription && subscription.unsubscribe())
 			.then((successful) => {
 				if (successful) {
-					alternatePushButton().removeAttr("disabled");
+					alternatePushButton().prop("disabled", false);
 				}
 			});
 	}
@@ -58,7 +58,7 @@ module.exports.initialize = () => {
 				$("#pushNotificationsUnsupported").hide();
 
 				pushNotificationsButton
-					.removeAttr("disabled")
+					.prop("disabled", false)
 					.on("click", onPushButton);
 
 				clientSubscribed = !!subscription;
@@ -74,7 +74,7 @@ module.exports.initialize = () => {
 };
 
 function onPushButton() {
-	pushNotificationsButton.attr("disabled", true);
+	pushNotificationsButton.prop("disabled", true);
 
 	navigator.serviceWorker.ready.then((registration) =>
 		registration.pushManager.getSubscription().then((existingSubscription) => {
@@ -89,9 +89,9 @@ function onPushButton() {
 				userVisibleOnly: true,
 			}).then((subscription) => {
 				const rawKey = subscription.getKey ? subscription.getKey("p256dh") : "";
-				const key = rawKey ? window.btoa(String.fromCharCode.apply(null, new Uint8Array(rawKey))) : "";
+				const key = rawKey ? window.btoa(String.fromCharCode(...new Uint8Array(rawKey))) : "";
 				const rawAuthSecret = subscription.getKey ? subscription.getKey("auth") : "";
-				const authSecret = rawAuthSecret ? window.btoa(String.fromCharCode.apply(null, new Uint8Array(rawAuthSecret))) : "";
+				const authSecret = rawAuthSecret ? window.btoa(String.fromCharCode(...new Uint8Array(rawAuthSecret))) : "";
 
 				socket.emit("push:register", {
 					token: storage.get("token"),
@@ -106,12 +106,12 @@ function onPushButton() {
 			});
 		}).then((successful) => {
 			if (successful) {
-				alternatePushButton().removeAttr("disabled");
+				alternatePushButton().prop("disabled", false);
 			}
 		})
 	).catch((err) => {
 		$("#pushNotificationsUnsupported")
-			.find("span").text(`An error has occured: ${err}`).end()
+			.find("span").text(`An error has occurred: ${err}`).end()
 			.show();
 	});
 

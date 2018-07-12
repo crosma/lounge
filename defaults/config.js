@@ -54,9 +54,9 @@ module.exports = {
 	// Find out how to add new themes at https://thelounge.github.io/docs/plugins/themes.html
 	//
 	// @type     string
-	// @default  "example"
+	// @default  "default"
 	//
-	theme: "example",
+	theme: "default",
 
 	//
 	// Prefetch URLs
@@ -149,31 +149,17 @@ module.exports = {
 	webirc: null,
 
 	//
-	// Log settings
+	// Message logging
+	// Logging is also controlled per user individually (logs variable)
+	// Leave the array empty to disable all logging globally
 	//
-	// Logging has to be enabled per user. If enabled, logs will be stored in
-	// the 'logs/<user>/<network>/' folder.
+	// text: Text file per network/channel in user folder
+	// sqlite: Messages are stored in SQLite, this allows them to be reloaded on server restart
 	//
-	// @type     object
-	// @default  {}
+	// @type     array
+	// @default  ["sqlite", "text"]
 	//
-	logs: {
-		//
-		// Timestamp format
-		//
-		// @type     string
-		// @default  "YYYY-MM-DD HH:mm:ss"
-		//
-		format: "YYYY-MM-DD HH:mm:ss",
-
-		//
-		// Timezone
-		//
-		// @type     string
-		// @default  "UTC+00:00"
-		//
-		timezone: "UTC+00:00",
-	},
+	messageStorage: ["sqlite", "text"],
 
 	//
 	// Maximum number of history lines per channel
@@ -234,20 +220,34 @@ module.exports = {
 		tls: true,
 
 		//
+		// Enable certificate verification
+		//
+		// If true, the server certificate is verified against
+		// the list of supplied CAs by your node.js installation.
+		//
+		// @type     boolean
+		// @default  true
+		//
+		rejectUnauthorized: true,
+
+		//
 		// Nick
 		//
-		// @type     string
-		// @default  "lounge-user"
+		// Percent sign (%) will be replaced into a random number from 0 to 9.
+		// For example, Guest%%% will become Guest123 on page load.
 		//
-		nick: "lounge-user",
+		// @type     string
+		// @default  "thelounge%%"
+		//
+		nick: "thelounge%%",
 
 		//
 		// Username
 		//
 		// @type     string
-		// @default  "lounge-user"
+		// @default  "thelounge"
 		//
-		username: "lounge-user",
+		username: "thelounge",
 
 		//
 		// Real Name
@@ -323,9 +323,9 @@ module.exports = {
 	// Default quit and part message if none is provided.
 	//
 	// @type     string
-	// @default  "The Lounge - https://thelounge.github.io"
+	// @default  "The Lounge - https://thelounge.chat"
 	//
-	leaveMessage: "The Lounge - https://thelounge.github.io",
+	leaveMessage: "The Lounge - https://thelounge.chat",
 
 	//
 	// Run The Lounge with identd support.

@@ -1,6 +1,7 @@
 "use strict";
 
-const colors = require("colors/safe");
+const log = require("../log");
+const colors = require("chalk");
 const program = require("commander");
 const Helper = require("../helper");
 const Utils = require("./utils");
@@ -13,7 +14,6 @@ program
 		const fs = require("fs");
 		const fsextra = require("fs-extra");
 		const path = require("path");
-		const child = require("child_process");
 		const packageJson = require("package-json");
 
 		if (!fs.existsSync(Helper.getConfigPath())) {
@@ -23,59 +23,50 @@ program
 
 		log.info("Retrieving information about the package...");
 
+		const split = packageName.split("@");
+		packageName = split[0];
+		const packageVersion = split[1] || "latest";
+
 		packageJson(packageName, {
 			fullMetadata: true,
+			version: packageVersion,
 		}).then((json) => {
 			if (!("thelounge" in json)) {
-				log.error(`${colors.red(packageName)} does not have The Lounge metadata.`);
+				log.error(`${colors.red(json.name + " v" + json.version)} does not have The Lounge metadata.`);
 
 				process.exit(1);
 			}
 
-			log.info(`Installing ${colors.green(packageName)}...`);
+			log.info(`Installing ${colors.green(json.name + " v" + json.version)}...`);
 
 			const packagesPath = Helper.getPackagesPath();
-			const packagesParent = path.dirname(packagesPath);
-			const packagesConfig = path.join(packagesParent, "package.json");
+			const packagesConfig = path.join(packagesPath, "package.json");
 
-			// Create node_modules folder, otherwise npm will start walking upwards to find one
-			fsextra.ensureDirSync(packagesPath);
+			// Create node_modules folder, otherwise yarn will start walking upwards to find one
+			fsextra.ensureDirSync(path.join(packagesPath, "node_modules"));
 
-			// Create package.json with private set to true to avoid npm warnings
-			fs.writeFileSync(packagesConfig, JSON.stringify({
-				private: true,
-				description: "Packages for The Lounge. All packages in node_modules directory will be automatically loaded.",
-			}, null, "\t"));
+			// Create package.json with private set to true, if it doesn't exist already
+			if (!fs.existsSync(packagesConfig)) {
+				fs.writeFileSync(packagesConfig, JSON.stringify({
+					private: true,
+					description: "Packages for The Lounge. All packages in node_modules directory will be automatically loaded.",
+				}, null, "\t"));
+			}
 
-			const npm = child.spawn(
-				process.platform === "win32" ? "npm.cmd" : "npm",
-				[
-					"install",
-					"--production",
-					"--no-save",
-					"--no-bin-links",
-					"--no-package-lock",
-					"--prefix",
-					packagesParent,
-					packageName,
-				],
-				{
-					stdio: "inherit",
-				}
-			);
-
-			npm.on("error", (e) => {
-				log.error(`${e}`);
-				process.exit(1);
-			});
-
-			npm.on("close", (code) => {
-				if (code !== 0) {
-					log.error(`Failed to install ${colors.green(packageName)}. Exit code: ${code}`);
-					return;
-				}
-
-				log.info(`${colors.green(packageName)} has been successfully installed.`);
+			return Utils.executeYarnCommand(
+				"add",
+				"--json",
+				"--exact",
+				"--production",
+				"--ignore-scripts",
+				"--non-interactive",
+				"--cwd",
+				packagesPath,
+				`${json.name}@${json.version}`
+			).then(() => {
+				log.info(`${colors.green(json.name + " v" + json.version)} has been successfully installed.`);
+			}).catch((code) => {
+				throw `Failed to install ${colors.green(json.name + " v" + json.version)}. Exit code: ${code}`;
 			});
 		}).catch((e) => {
 			log.error(`${e}`);

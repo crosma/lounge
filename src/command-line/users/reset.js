@@ -1,6 +1,7 @@
 "use strict";
 
-const colors = require("colors/safe");
+const log = require("../../log");
+const colors = require("chalk");
 const program = require("commander");
 const fs = require("fs");
 const Helper = require("../../helper");
@@ -23,12 +24,13 @@ program
 			return;
 		}
 
-		if (users.indexOf(name) === -1) {
+		if (!users.includes(name)) {
 			log.error(`User ${colors.bold(name)} does not exist.`);
 			return;
 		}
-		var file = Helper.getUserConfigPath(name);
-		var user = require(file);
+
+		const file = Helper.getUserConfigPath(name);
+		const user = require(file);
 		log.prompt({
 			text: "Enter new password:",
 			silent: true,
@@ -36,6 +38,7 @@ program
 			if (err) {
 				return;
 			}
+
 			user.password = Helper.password.hash(password);
 			user.sessions = {};
 			fs.writeFileSync(

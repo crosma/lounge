@@ -1,6 +1,7 @@
 "use strict";
 
 const _ = require("lodash");
+const log = require("../../log");
 const Msg = require("../../models/msg");
 const Chan = require("../../models/chan");
 const Helper = require("../../helper");
@@ -62,6 +63,8 @@ module.exports = function(irc, network) {
 		network.channels[0].pushMessage(client, new Msg({
 			text: "Connected to the network.",
 		}), true);
+
+		sendStatus();
 	});
 
 	irc.on("close", function() {
@@ -73,19 +76,38 @@ module.exports = function(irc, network) {
 	let identSocketId;
 
 	irc.on("raw socket connected", function(socket) {
-		identSocketId = client.manager.identHandler.addSocket(socket, client.name || network.username);
+		let ident = client.name || network.username;
+
+		if (Helper.config.useHexIp) {
+			ident = Helper.ip2hex(network.ip);
+		}
+
+		identSocketId = client.manager.identHandler.addSocket(socket, ident);
 	});
 
-	irc.on("socket close", function() {
+	irc.on("socket close", function(error) {
 		if (identSocketId > 0) {
 			client.manager.identHandler.removeSocket(identSocketId);
 			identSocketId = 0;
 		}
+
+		network.channels.forEach((chan) => {
+			chan.state = Chan.State.PARTED;
+		});
+
+		if (error) {
+			network.channels[0].pushMessage(client, new Msg({
+				type: Msg.Type.ERROR,
+				text: `Connection closed unexpectedly: ${error}`,
+			}), true);
+		}
+
+		sendStatus();
 	});
 
 	if (Helper.config.debug.ircFramework) {
 		irc.on("debug", function(message) {
-			log.debug("[" + client.name + " (#" + client.id + ") on " + network.name + " (#" + network.id + ")]", message);
+			log.debug(`[${client.name} (${client.id}) on ${network.name} (${network.uuid}]`, message);
 		});
 	}
 
@@ -134,8 +156,15 @@ module.exports = function(irc, network) {
 		network.serverOptions.NETWORK = data.options.NETWORK;
 
 		client.emit("network_changed", {
-			network: network.id,
+			network: network.uuid,
 			serverOptions: network.serverOptions,
 		});
 	});
+
+	function sendStatus() {
+		const status = network.getNetworkStatus();
+		status.network = network.uuid;
+
+		client.emit("network:status", status);
+	}
 };

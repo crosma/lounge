@@ -6,7 +6,7 @@ const Helper = require("../../helper");
 
 exports.commands = ["disconnect"];
 
-exports.input = function(network, chan, cmd, args) {
+exports.input = function({irc}, chan, cmd, args) {
 	const lobby = network.channels[0];
 	const msg = new Msg({
 		type: Msg.Type.ERROR,
@@ -16,7 +16,7 @@ exports.input = function(network, chan, cmd, args) {
 	lobby.pushMessage(client, msg, true);
 	return false;
 	
-	var quitMessage = args[0] ? args.join(" ") : Helper.config.leaveMessage;
+	const quitMessage = args[0] ? args.join(" ") : Helper.config.leaveMessage;
 
-	network.irc.quit(quitMessage);
+	irc.quit(quitMessage);
 };

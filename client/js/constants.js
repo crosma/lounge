@@ -38,6 +38,8 @@ const commands = [
 	"/expand",
 	"/ho",
 	"/hs",
+	"/ignore",
+	"/ignorelist",
 	"/invite",
 	"/join",
 	"/kick",
@@ -64,28 +66,9 @@ const commands = [
 	"/slap",
 	"/topic",
 	"/unban",
+	"/unignore",
 	"/voice",
 	"/whois",
-];
-
-const actionTypes = [
-	"away",
-	"back",
-	"ban_list",
-	"invite",
-	"join",
-	"mode",
-	"kick",
-	"nick",
-	"part",
-	"quit",
-	"topic",
-	"topic_set_by",
-	"action",
-	"whois",
-	"ctcp",
-	"chghost",
-	"channel_list",
 ];
 
 const condensedTypes = [
@@ -99,6 +82,7 @@ const condensedTypes = [
 	"kick",
 	"mode",
 ];
+const condensedTypesQuery = "." + condensedTypes.join(", .");
 
 const timeFormats = {
 	msgDefault: "HH:mm",
@@ -106,10 +90,9 @@ const timeFormats = {
 };
 
 module.exports = {
-	colorCodeMap: colorCodeMap,
-	commands: commands,
-	condensedTypes: condensedTypes,
-	condensedTypesQuery: "." + condensedTypes.join(", ."),
-	actionTypes: actionTypes,
-	timeFormats: timeFormats,
+	colorCodeMap,
+	commands,
+	condensedTypes,
+	condensedTypesQuery,
+	timeFormats,
 };

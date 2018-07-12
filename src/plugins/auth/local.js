@@ -1,7 +1,8 @@
 "use strict";
 
+const log = require("../../log");
 const Helper = require("../../helper");
-const colors = require("colors/safe");
+const colors = require("chalk");
 
 function localAuth(manager, client, user, password, callback) {
 	// If no user is found, or if the client has not provided a password,

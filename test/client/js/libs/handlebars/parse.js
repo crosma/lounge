@@ -7,7 +7,7 @@ describe("parse Handlebars helper", () => {
 	it("should not introduce xss", () => {
 		const testCases = [{
 			input: "<img onerror='location.href=\"//youtube.com\"'>",
-			expected: "&lt;img onerror&#x3D;&#x27;location.href&#x3D;&quot;//youtube.com&quot;&#x27;&gt;",
+			expected: "&lt;img onerror&#x3D;&#x27;location.href&#x3D;&quot;<a href=\"http://youtube.com\" target=\"_blank\" rel=\"noopener\">//youtube.com</a>&quot;&#x27;&gt;",
 		}, {
 			input: '#&">bug',
 			expected: '<span class="inline-channel" role="button" tabindex="0" data-chan="#&amp;&quot;&gt;bug">#&amp;&quot;&gt;bug</span>',
@@ -19,10 +19,10 @@ describe("parse Handlebars helper", () => {
 		expect(actual).to.deep.equal(expected);
 	});
 
-	it("should skip control codes", () => {
+	it("should skip all <32 ASCII codes except linefeed", () => {
 		const testCases = [{
-			input: "text\x01with\x04control\x05codes",
-			expected: "textwithcontrolcodes",
+			input: "\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0B\x0C\x0D\x0E\x0F\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1A\x1B\x1C\x1B\x1D\x1D\x1E\x1Ftext\x0Awithcontrolcodestest",
+			expected: '<span class="irc-underline irc-strikethrough irc-monospace">text\nwithcontrolcodestest</span>',
 		}];
 
 		const actual = testCases.map((testCase) => parse(testCase.input));
@@ -45,11 +45,11 @@ describe("parse Handlebars helper", () => {
 					"www.nooooooooooooooo.com" +
 				"</a>",
 		}, {
-			input: "look at https://thelounge.github.io/ for more information",
+			input: "look at https://thelounge.chat/ for more information",
 			expected:
 				"look at " +
-				'<a href="https://thelounge.github.io/" target="_blank" rel="noopener">' +
-					"https://thelounge.github.io/" +
+				'<a href="https://thelounge.chat/" target="_blank" rel="noopener">' +
+					"https://thelounge.chat/" +
 				"</a>" +
 				" for more information",
 		}, {
@@ -358,25 +358,29 @@ describe("parse Handlebars helper", () => {
 	[{
 		name: "in text",
 		input: "Hello💬",
-		expected: 'Hello<span class="emoji">💬</span>',
+		expected: 'Hello<span class="emoji" role="img" aria-label="Emoji: speech balloon" title="speech balloon">💬</span>',
+	}, {
+		name: "complicated zero-join-width emoji",
+		input: "🤦🏿‍♀️",
+		expected: '<span class="emoji" role="img" aria-label="Emoji: woman facepalming: dark skin tone" title="woman facepalming: dark skin tone">🤦🏿‍♀️</span>',
 	}, {
 		name: "with modifiers",
 		input: "🤷‍♀️",
-		expected: '<span class="emoji">🤷‍♀️</span>',
+		expected: '<span class="emoji" role="img" aria-label="Emoji: woman shrugging" title="woman shrugging">🤷‍♀️</span>',
 	}, {
-		// FIXME: These multiple `span`s should be optimized into a single one. See https://github.com/thelounge/lounge/issues/1783
+		// FIXME: These multiple `span`s should be optimized into a single one. See https://github.com/thelounge/thelounge/issues/1783
 		name: "wrapped in style",
 		input: "Super \x034💚 green!",
-		expected: 'Super <span class="emoji"><span class="irc-fg4">💚</span></span><span class="irc-fg4"> green!</span>',
+		expected: 'Super <span class="emoji" role="img" aria-label="Emoji: green heart" title="green heart"><span class="irc-fg4">💚</span></span><span class="irc-fg4"> green!</span>',
 	}, {
 		name: "wrapped in URLs",
 		input: "https://i.❤️.thelounge.chat",
-		// FIXME: Emoji in text should be `<span class="emoji">❤️</span>`. See https://github.com/thelounge/lounge/issues/1784
+		// FIXME: Emoji in text should be `<span class="emoji">❤️</span>`. See https://github.com/thelounge/thelounge/issues/1784
 		expected: '<a href="https://i.❤️.thelounge.chat" target="_blank" rel="noopener">https://i.❤️.thelounge.chat</a>',
 	}, {
 		name: "wrapped in channels",
 		input: "#i❤️thelounge",
-		// FIXME: Emoji in text should be `<span class="emoji">❤️</span>`. See https://github.com/thelounge/lounge/issues/1784
+		// FIXME: Emoji in text should be `<span class="emoji">❤️</span>`. See https://github.com/thelounge/thelounge/issues/1784
 		expected: '<span class="inline-channel" role="button" tabindex="0" data-chan="#i❤️thelounge">#i❤️thelounge</span>',
 	}].forEach((item) => { // TODO: In Node v6+, use `{name, input, expected}`
 		it(`should find emoji: ${item.name}`, function() {

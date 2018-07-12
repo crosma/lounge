@@ -19,7 +19,8 @@ const colorRx = /^(\d{1,2})(?:,(\d{1,2}))?/;
 const hexColorRx = /^([0-9a-f]{6})(?:,([0-9a-f]{6}))?/i;
 
 // Represents all other control codes that to be ignored/filtered from the text
-const controlCodesRx = /[\u0000-\u001F]/g;
+// This regex allows line feed character
+const controlCodesRx = /[\u0000-\u0009\u000B-\u001F]/g;
 
 // Converts a given text into an array of objects, each of them representing a
 // similarly styled section of the text. Each object carries the `text`, style
@@ -45,6 +46,7 @@ function parseStyle(text) {
 		strikethrough = false;
 		monospace = false;
 	};
+
 	resetStyle();
 
 	// When called, this "closes" the current fragment by adding an entry to the
@@ -110,9 +112,11 @@ function parseStyle(text) {
 
 			if (colorCodes) {
 				textColor = Number(colorCodes[1]);
+
 				if (colorCodes[2]) {
 					bgColor = Number(colorCodes[2]);
 				}
+
 				// Color code length is > 1, so bump the current position cursor by as
 				// much (and reset the start cursor for the current text block as well)
 				position += colorCodes[0].length;
@@ -122,6 +126,7 @@ function parseStyle(text) {
 				textColor = undefined;
 				bgColor = undefined;
 			}
+
 			break;
 
 		case HEX_COLOR:
@@ -131,9 +136,11 @@ function parseStyle(text) {
 
 			if (colorCodes) {
 				hexColor = colorCodes[1].toUpperCase();
+
 				if (colorCodes[2]) {
 					hexBgColor = colorCodes[2].toUpperCase();
 				}
+
 				// Color code length is > 1, so bump the current position cursor by as
 				// much (and reset the start cursor for the current text block as well)
 				position += colorCodes[0].length;
@@ -153,6 +160,7 @@ function parseStyle(text) {
 			textColor = tmp;
 			break;
 		}
+
 		case ITALIC:
 			emitFragment();
 			italic = !italic;
@@ -193,12 +201,14 @@ function prepare(text) {
 		.reduce((prev, curr) => {
 			if (prev.length) {
 				const lastEntry = prev[prev.length - 1];
+
 				if (properties.every((key) => curr[key] === lastEntry[key])) {
 					lastEntry.text += curr.text;
 					lastEntry.end += curr.text.length;
 					return prev;
 				}
 			}
+
 			return prev.concat([curr]);
 		}, []);
 }

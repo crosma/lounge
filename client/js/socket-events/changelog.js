@@ -4,10 +4,6 @@ const $ = require("jquery");
 const socket = require("../socket");
 const templates = require("../../views");
 
-module.exports = {
-	requestIfNeeded,
-};
-
 // Requests version information if it hasn't been retrieved before (or if it has
 // been removed from the page, i.e. when clicking on "Check now". Displays a
 // loading state until received.
@@ -24,7 +20,7 @@ socket.on("changelog", function(data) {
 
 	const links = $("#changelog .changelog-text a");
 	// Make sure all links will open a new tab instead of exiting the application
-	links.attr("target", "_blank");
+	links.prop("target", "_blank");
 	// Add required metadata to image links, to support built-in image viewer
 	links.has("img").addClass("toggle-thumbnail");
 
@@ -54,6 +50,8 @@ socket.on("changelog", function(data) {
 	}
 });
 
+$("#help, #changelog").on("show", requestIfNeeded);
+
 // When clicking the "Check now" button, remove current checker information and
 // request a new one. Loading will be displayed in the meantime.
 $("#help").on("click", "#check-now", () => {
@@ -64,6 +62,6 @@ $("#help").on("click", "#check-now", () => {
 // Given a status and latest release information, update the version checker
 // (CSS class and content)
 function renderVersionChecker({status, latest}) {
-	$("#version-checker").attr("class", status)
+	$("#version-checker").prop("class", status)
 		.html(templates.version_checker({latest, status}));
 }

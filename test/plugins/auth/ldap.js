@@ -1,8 +1,9 @@
 "use strict";
 
+const log = require("../../../src/log");
 const ldapAuth = require("../../../src/plugins/auth/ldap");
 const Helper = require("../../../src/helper");
-const ldap = require("ldapjs");
+const ldap = require("thelounge-ldapjs-non-maintained-fork");
 const expect = require("chai").expect;
 
 const user = "johndoe";
@@ -116,6 +117,7 @@ describe("LDAP authentication plugin", function() {
 
 	before(function(done) {
 		originalLogInfo = log.info;
+
 		log.info = () => {};
 
 		server = startLdapServer(done);

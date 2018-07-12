@@ -3,14 +3,13 @@
 const webpack = require("webpack");
 const path = require("path");
 const CopyPlugin = require("copy-webpack-plugin");
-
-// ********************
-// Common configuration
-// ********************
+const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 
 const config = {
+	mode: process.env.NODE_ENV === "production" ? "production" : "development",
 	entry: {
 		"js/bundle.js": path.resolve(__dirname, "client/js/lounge.js"),
+		"css/style": path.resolve(__dirname, "client/css/style.css"),
 	},
 	devtool: "source-map",
 	output: {
@@ -20,6 +19,22 @@ const config = {
 	},
 	module: {
 		rules: [
+			{
+				test: /\.css$/,
+				include: [
+					path.resolve(__dirname, "client"),
+				],
+				use: [
+					MiniCssExtractPlugin.loader,
+					{
+						loader: "css-loader",
+						options: {
+							url: false,
+							minimize: process.env.NODE_ENV === "production",
+						},
+					},
+				],
+			},
 			{
 				test: /\.js$/,
 				include: [
@@ -31,7 +46,10 @@ const config = {
 						presets: [
 							["env", {
 								targets: {
-									browsers: "last 2 versions",
+									browsers: [
+										"last 1 year",
+										"firefox esr",
+									],
 								},
 							}],
 						],
@@ -43,7 +61,7 @@ const config = {
 				include: [
 					path.resolve(__dirname, "client/views"),
 				],
-				use: {
+				use: [{
 					loader: "handlebars-loader",
 					options: {
 						helperDirs: [
@@ -53,26 +71,46 @@ const config = {
 							".tpl",
 						],
 					},
-				},
+				}, {
+					loader: "html-minifier-loader",
+					options: {
+						ignoreCustomFragments: [
+							/{{[\s\S]*?}}/,
+						],
+					},
+				}],
 			},
 		],
+	},
+	optimization: {
+		splitChunks: {
+			cacheGroups: {
+				commons: {
+					test: /[\\/]node_modules[\\/]/,
+					name: "js/bundle.vendor.js",
+					chunks: "all",
+				},
+			},
+		},
 	},
 	externals: {
 		json3: "JSON", // socket.io uses json3.js, but we do not target any browsers that need it
 	},
 	plugins: [
+		new MiniCssExtractPlugin(),
 		new CopyPlugin([
 			{
-				from: "./node_modules/font-awesome/fonts/fontawesome-webfont.woff*",
+				from: "./node_modules/@fortawesome/fontawesome-free/webfonts/fa-solid-900.woff*",
 				to: "fonts/[name].[ext]",
 			},
 			{
 				from: "./client/js/loading-error-handlers.js",
 				to: "js/[name].[ext]",
 			},
-			{ // TODO: Build index.html with handlebars
+			{
 				from: "./client/*",
 				to: "[name].[ext]",
+				ignore: "index.html.tpl",
 			},
 			{
 				from: "./client/audio/*",
@@ -86,10 +124,6 @@ const config = {
 				from: "./client/themes/*",
 				to: "themes/[name].[ext]",
 			},
-			{ // TODO: Build css with postcss
-				from: "./client/css/*",
-				to: "css/[name].[ext]",
-			},
 			{
 				from: "./node_modules/primer-tooltips/build/build.css",
 				to: "css/primer-tooltips.[ext]",
@@ -97,23 +131,7 @@ const config = {
 		]),
 		// socket.io uses debug, we don't need it
 		new webpack.NormalModuleReplacementPlugin(/debug/, path.resolve(__dirname, "scripts/noop.js")),
-		// automatically split all vendor dependencies into a separate bundle
-		new webpack.optimize.CommonsChunkPlugin({
-			name: "js/bundle.vendor.js",
-			minChunks: (module) => module.context && module.context.indexOf("node_modules") !== -1,
-		}),
 	],
 };
-
-// *********************************
-// Production-specific configuration
-// *********************************
-
-if (process.env.NODE_ENV === "production") {
-	config.plugins.push(new webpack.optimize.UglifyJsPlugin({
-		sourceMap: true,
-		comments: false,
-	}));
-}
 
 module.exports = config;

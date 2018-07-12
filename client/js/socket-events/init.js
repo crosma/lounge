@@ -5,6 +5,7 @@ const escape = require("css.escape");
 const socket = require("../socket");
 const render = require("../render");
 const webpush = require("../webpush");
+const slideoutMenu = require("../slideout");
 const sidebar = $("#sidebar");
 const storage = require("../localStorage");
 const utils = require("../utils");
@@ -22,26 +23,40 @@ socket.on("init", function(data) {
 
 	if (data.networks.length === 0) {
 		sidebar.find(".empty").show();
-
-		$("#footer").find(".connect").trigger("click", {
-			pushState: false,
-		});
 	} else {
 		render.renderNetworks(data);
 	}
 
-	if (lastMessageId > -1) {
-		$("#connection-error").removeClass("shown");
-		$(".show-more-button, #input").prop("disabled", false);
-		$("#submit").show();
-	} else {
+	$("#connection-error").removeClass("shown");
+	$(".show-more button, #input").prop("disabled", false);
+	$("#submit").show();
+
+	if (lastMessageId < 0) {
 		if (data.token) {
 			storage.set("token", data.token);
 		}
 
 		webpush.configurePushNotifications(data.pushSubscription, data.applicationServerKey);
 
-		$("body").removeClass("signed-out");
+		slideoutMenu.enable();
+
+		const viewport = $("#viewport");
+		const viewportWidth = $(window).outerWidth();
+		let isUserlistOpen = storage.get("thelounge.state.userlist");
+
+		if (viewportWidth >= utils.mobileViewportPixels) {
+			slideoutMenu.toggle(storage.get("thelounge.state.sidebar") === "true");
+		}
+
+		// If The Lounge is opened on a small screen (less than 1024px), and we don't have stored
+		// user list state, close it by default
+		if (viewportWidth >= 1024 && isUserlistOpen !== "true" && isUserlistOpen !== "false") {
+			isUserlistOpen = "true";
+		}
+
+		viewport.toggleClass("userlist-open", isUserlistOpen === "true");
+
+		$(document.body).removeClass("signed-out");
 		$("#loading").remove();
 		$("#sign-in").remove();
 

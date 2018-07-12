@@ -12,6 +12,7 @@ const chat = $("#chat");
 const sidebar = $("#sidebar");
 
 let pop;
+
 try {
 	pop = new Audio();
 	pop.src = "audio/pop.ogg";
@@ -47,10 +48,11 @@ function processReceivedMessage(data) {
 		}
 	}
 
+	const scrollContainer = channel.find(".chat");
 	const container = channel.find(".messages");
 	const activeChannelId = chat.find(".chan.active").data("id");
 
-	if (data.msg.type === "channel_list" || data.msg.type === "ban_list") {
+	if (data.msg.type === "channel_list" || data.msg.type === "ban_list" || data.msg.type === "ignore_list") {
 		$(container).empty();
 	}
 
@@ -58,21 +60,35 @@ function processReceivedMessage(data) {
 	render.appendMessage(
 		container,
 		targetId,
-		channel.attr("data-type"),
+		channel.data("type"),
 		data.msg
 	);
 
 	if (activeChannelId === targetId) {
-		container.trigger("keepToBottom");
+		scrollContainer.trigger("keepToBottom");
 	}
 
 	notifyMessage(targetId, channel, data);
 
-	var lastVisible = container.find("div:visible").last();
-	if (data.msg.self
-		|| lastVisible.hasClass("unread-marker")
-		|| (lastVisible.hasClass("date-marker")
-		&& lastVisible.prev().hasClass("unread-marker"))) {
+	let shouldMoveMarker = data.msg.self;
+
+	if (!shouldMoveMarker) {
+		const lastChild = container.children().last();
+
+		// If last element is hidden (e.g. hidden status messages) check the element before it.
+		// If it's unread marker or date marker, then move unread marker to the bottom
+		// so that it isn't displayed as the last element in chat.
+		// display properly is checked instead of using `:hidden` selector because it doesn't work in non-active channels.
+		if (lastChild.css("display") === "none") {
+			const prevChild = lastChild.prev();
+
+			shouldMoveMarker =
+				prevChild.hasClass("unread-marker") ||
+				(prevChild.hasClass("date-marker") && prevChild.prev().hasClass("unread-marker"));
+		}
+	}
+
+	if (shouldMoveMarker) {
 		container
 			.find(".unread-marker")
 			.data("unread-id", 0)
@@ -81,7 +97,12 @@ function processReceivedMessage(data) {
 
 	// Clear unread/highlight counter if self-message
 	if (data.msg.self) {
-		sidebarTarget.find(".badge").removeClass("highlight").empty();
+		sidebarTarget.find(".badge")
+			.attr("data-highlight", 0)
+			.removeClass("highlight")
+			.empty();
+
+		utils.updateTitle();
 	}
 
 	let messageLimit = 0;
@@ -89,7 +110,7 @@ function processReceivedMessage(data) {
 	if (activeChannelId !== targetId) {
 		// If message arrives in non active channel, keep only 100 messages
 		messageLimit = 100;
-	} else if (container.isScrollBottom()) {
+	} else if (scrollContainer.isScrollBottom()) {
 		// If message arrives in active channel, keep 500 messages if scroll is currently at the bottom
 		messageLimit = 500;
 	}
@@ -99,9 +120,11 @@ function processReceivedMessage(data) {
 	}
 
 	if ((data.msg.type === "message" || data.msg.type === "action") && channel.hasClass("channel")) {
-		const nicks = channel.find(".users").data("nicks");
+		const nicks = channel.find(".userlist").data("nicks");
+
 		if (nicks) {
 			const find = nicks.indexOf(data.msg.from.nick);
+
 			if (find !== -1) {
 				nicks.splice(find, 1);
 				nicks.unshift(data.msg.from.nick);
@@ -111,7 +134,9 @@ function processReceivedMessage(data) {
 }
 
 function notifyMessage(targetId, channel, msg) {
-	const unread = msg.unread;
+	const serverUnread = msg.unread;
+	const serverHighlight = msg.highlight;
+
 	msg = msg.msg;
 
 	if (msg.self) {
@@ -119,9 +144,10 @@ function notifyMessage(targetId, channel, msg) {
 	}
 
 	const button = sidebar.find(".chan[data-id='" + targetId + "']");
-	if (msg.highlight || (options.notifyAllMessages && msg.type === "message")) {
+
+	if (msg.highlight || (options.settings.notifyAllMessages && msg.type === "message")) {
 		if (!document.hasFocus() || !channel.hasClass("active")) {
-			if (options.notification) {
+			if (options.settings.notification) {
 				try {
 					pop.play();
 				} catch (exception) {
@@ -131,7 +157,7 @@ function notifyMessage(targetId, channel, msg) {
 
 			utils.toggleNotificationMarkers(true);
 
-			if (options.desktopNotifications && Notification.permission === "granted") {
+			if (options.settings.desktopNotifications && ("Notification" in window) && Notification.permission === "granted") {
 				let title;
 				let body;
 
@@ -140,14 +166,19 @@ function notifyMessage(targetId, channel, msg) {
 					body = msg.from.nick + " invited you to " + msg.channel;
 				} else {
 					title = msg.from.nick;
+
 					if (!button.hasClass("query")) {
-						title += " (" + button.data("title").trim() + ")";
+						title += " (" + button.attr("aria-label").trim() + ")";
 					}
+
 					if (msg.type === "message") {
 						title += " says:";
 					}
+
 					body = cleanIrcMessage(msg.text);
 				}
+
+				const timestamp = Date.parse(msg.time);
 
 				try {
 					if (webpush.hasServiceWorker) {
@@ -155,7 +186,7 @@ function notifyMessage(targetId, channel, msg) {
 							registration.active.postMessage({
 								type: "notification",
 								chanId: targetId,
-								timestamp: msg.time,
+								timestamp: timestamp,
 								title: title,
 								body: body,
 							});
@@ -163,14 +194,14 @@ function notifyMessage(targetId, channel, msg) {
 					} else {
 						const notify = new Notification(title, {
 							tag: `chan-${targetId}`,
-							badge: "img/logo-64.png",
-							icon: "img/touch-icon-192x192.png",
+							badge: "img/icon-alerted-black-transparent-bg-72x72px.png",
+							icon: "img/icon-alerted-grey-bg-192x192px.png",
 							body: body,
-							timestamp: msg.time,
+							timestamp: timestamp,
 						});
 						notify.addEventListener("click", function() {
 							window.focus();
-							button.click();
+							button.trigger("click");
 							this.close();
 						});
 					}
@@ -181,13 +212,17 @@ function notifyMessage(targetId, channel, msg) {
 		}
 	}
 
-	if (!unread || button.hasClass("active")) {
+	if (!serverUnread || button.hasClass("active")) {
 		return;
 	}
 
-	const badge = button.find(".badge").html(helpers_roundBadgeNumber(unread));
+	const badge = button.find(".badge")
+		.attr("data-highlight", serverHighlight)
+		.html(helpers_roundBadgeNumber(serverUnread));
 
 	if (msg.highlight) {
 		badge.addClass("highlight");
+
+		utils.updateTitle();
 	}
 }

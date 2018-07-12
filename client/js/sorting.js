@@ -17,20 +17,20 @@ module.exports = function() {
 		forcePlaceholderSize: true,
 		tolerance: "pointer", // Use the pointer to figure out where the network is in the list
 
-		update: function() {
+		update() {
 			const order = [];
+
 			sidebar.find(".network").each(function() {
-				const id = $(this).data("id");
+				const id = $(this).data("uuid");
 				order.push(id);
 			});
-			socket.emit(
-				"sort", {
-					type: "networks",
-					order: order,
-				}
-			);
 
-			options.ignoreSortSync = true;
+			socket.emit("sort", {
+				type: "networks",
+				order: order,
+			});
+
+			options.settings.ignoreSortSync = true;
 		},
 	});
 	sidebar.find(".network").sortable({
@@ -43,22 +43,22 @@ module.exports = function() {
 		forcePlaceholderSize: true,
 		tolerance: "pointer", // Use the pointer to figure out where the channel is in the list
 
-		update: function(e, ui) {
+		update(e, ui) {
 			const order = [];
 			const network = ui.item.parent();
+
 			network.find(".chan").each(function() {
 				const id = $(this).data("id");
 				order.push(id);
 			});
-			socket.emit(
-				"sort", {
-					type: "channels",
-					target: network.data("id"),
-					order: order,
-				}
-			);
 
-			options.ignoreSortSync = true;
+			socket.emit("sort", {
+				type: "channels",
+				target: network.data("uuid"),
+				order: order,
+			});
+
+			options.settings.ignoreSortSync = true;
 		},
 	});
 };

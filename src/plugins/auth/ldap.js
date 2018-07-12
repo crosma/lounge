@@ -1,7 +1,12 @@
 "use strict";
 
+const log = require("../../log");
 const Helper = require("../../helper");
-const ldap = require("ldapjs");
+
+// Forked ldapjs for 2 reasons:
+// 1. Removed bunyan https://github.com/joyent/node-ldapjs/pull/399
+// 2. Remove dtrace-provider dependency
+const ldap = require("thelounge-ldapjs-non-maintained-fork");
 
 function ldapAuthCommon(user, bindDN, password, callback) {
 	const config = Helper.config;
@@ -73,7 +78,7 @@ function advancedLdapAuth(user, password, callback) {
 		} else {
 			ldapclient.search(base, searchOptions, function(err2, res) {
 				if (err2) {
-					log.warning(`User not found: ${userDN}`);
+					log.warn(`User not found: ${userDN}`);
 					ldapclient.unbind();
 					callback(false);
 				} else {
@@ -92,6 +97,7 @@ function advancedLdapAuth(user, password, callback) {
 					});
 					res.on("end", function() {
 						ldapclient.unbind();
+
 						if (!found) {
 							callback(false);
 						}
@@ -109,17 +115,20 @@ function ldapAuth(manager, client, user, password, callback) {
 	// auth plugin API
 	function callbackWrapper(valid) {
 		if (valid && !client) {
-			manager.addUser(user, null);
+			manager.addUser(user, null, true);
 		}
+
 		callback(valid);
 	}
 
 	let auth;
+
 	if ("baseDN" in Helper.config.ldap) {
 		auth = simpleLdapAuth;
 	} else {
 		auth = advancedLdapAuth;
 	}
+
 	return auth(user, password, callbackWrapper);
 }
 

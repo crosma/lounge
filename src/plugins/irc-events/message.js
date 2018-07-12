@@ -4,6 +4,7 @@ const Chan = require("../../models/chan");
 const Msg = require("../../models/msg");
 const LinkPrefetch = require("./link");
 const cleanIrcMessage = require("../../../client/js/libs/handlebars/ircmessageparser/cleanIrcMessage");
+const Helper = require("../../helper");
 const nickRegExp = /(?:\x03[0-9]{1,2}(?:,[0-9]{1,2})?)?([\w[\]\\`^{|}-]+)/g;
 
 module.exports = function(irc, network) {
@@ -43,11 +44,20 @@ module.exports = function(irc, network) {
 		let showInActive = false;
 		const self = data.nick === irc.user.nick;
 
+		// Check if the sender is in our ignore list
+		const shouldIgnore = network.ignoreList.some(function(entry) {
+			return Helper.compareHostmask(entry, data);
+		});
+
 		// Server messages go to server window, no questions asked
 		if (data.from_server) {
 			chan = network.channels[0];
 			from = chan.getUser(data.nick);
 		} else {
+			if (shouldIgnore) {
+				return;
+			}
+
 			let target = data.target;
 
 			// If the message is targeted at us, use sender as target instead
@@ -63,15 +73,18 @@ module.exports = function(irc, network) {
 					showInActive = true;
 					chan = network.channels[0];
 				} else {
-					chan = new Chan({
+					chan = client.createChannel({
 						type: Chan.Type.QUERY,
 						name: target,
 					});
-					network.channels.push(chan);
+
 					client.emit("join", {
-						network: network.id,
+						network: network.uuid,
 						chan: chan.getFilteredClone(true),
+						index: network.addChannel(chan),
 					});
+					client.save();
+					chan.loadMessages(client, network);
 				}
 			}
 
@@ -107,6 +120,7 @@ module.exports = function(irc, network) {
 		}
 
 		let match;
+
 		while ((match = nickRegExp.exec(data.message))) {
 			if (chan.findUser(match[1])) {
 				msg.users.push(match[1]);
@@ -114,7 +128,7 @@ module.exports = function(irc, network) {
 		}
 
 		// No prefetch URLs unless are simple MESSAGE or ACTION types
-		if ([Msg.Type.MESSAGE, Msg.Type.ACTION].indexOf(data.type) !== -1) {
+		if ([Msg.Type.MESSAGE, Msg.Type.ACTION].includes(data.type)) {
 			LinkPrefetch(client, chan, msg);
 		}
 
@@ -125,8 +139,11 @@ module.exports = function(irc, network) {
 			let title = chan.name;
 			let body = cleanIrcMessage(data.message);
 
-			// In channels, prepend sender nickname to the message
-			if (chan.type !== Chan.Type.QUERY) {
+			if (msg.type === Msg.Type.ACTION) {
+				// For actions, do not include colon in the message
+				body = `${data.nick} ${body}`;
+			} else if (chan.type !== Chan.Type.QUERY) {
+				// In channels, prepend sender nickname to the message
 				body = `${data.nick}: ${body}`;
 			}
 

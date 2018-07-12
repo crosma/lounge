@@ -4,13 +4,10 @@
 require("jquery-ui/ui/widgets/sortable");
 const $ = require("jquery");
 const moment = require("moment");
-const URI = require("urijs");
-const fuzzy = require("fuzzy");
 
 // our libraries
-require("./libs/jquery/inputhistory");
 require("./libs/jquery/stickyscroll");
-const slideoutMenu = require("./libs/slideout");
+const slideoutMenu = require("./slideout");
 const templates = require("../views");
 const socket = require("./socket");
 const render = require("./render");
@@ -20,181 +17,77 @@ const utils = require("./utils");
 require("./webpush");
 require("./keybinds");
 require("./clipboard");
-const Changelog = require("./socket-events/changelog");
-const JoinChannel = require("./join-channel");
+const contextMenuFactory = require("./contextMenuFactory");
 
 $(function() {
-	var sidebar = $("#sidebar, #footer");
-	var chat = $("#chat");
+	const sidebar = $("#sidebar, #footer");
+	const chat = $("#chat");
 
 	$(document.body).data("app-name", document.title);
 
-	var viewport = $("#viewport");
-	var sidebarSlide = slideoutMenu(viewport[0], sidebar[0]);
-	var contextMenuContainer = $("#context-menu-container");
-	var contextMenu = $("#context-menu");
+	const viewport = $("#viewport");
 
-	$("#main").on("click", function(e) {
-		if ($(e.target).is(".lt")) {
-			sidebarSlide.toggle(!sidebarSlide.isOpen());
-		} else if (sidebarSlide.isOpen()) {
-			sidebarSlide.toggle(false);
-		}
-	});
+	function storeSidebarVisibility(name, state) {
+		storage.set(name, state);
 
-	viewport.on("click", ".rt", function(e) {
-		var self = $(this);
-		viewport.toggleClass(self.attr("class"));
-		e.stopPropagation();
-		chat.find(".chan.active .chat").trigger("msg.sticky");
-	});
-
-	function positionContextMenu(that, e) {
-		var offset;
-		var menuWidth = contextMenu.outerWidth();
-		var menuHeight = contextMenu.outerHeight();
-
-		if (that.hasClass("menu")) {
-			offset = that.offset();
-			offset.left -= menuWidth - that.outerWidth();
-			offset.top += that.outerHeight();
-			return offset;
-		}
-
-		offset = {left: e.pageX, top: e.pageY};
-
-		if ((window.innerWidth - offset.left) < menuWidth) {
-			offset.left = window.innerWidth - menuWidth;
-		}
-
-		if ((window.innerHeight - offset.top) < menuHeight) {
-			offset.top = window.innerHeight - menuHeight;
-		}
-
-		return offset;
+		utils.togglePreviewMoreButtonsIfNeeded();
 	}
 
-	function showContextMenu(that, e) {
-		var target = $(e.currentTarget);
-		var output = "";
+	// If sidebar overlay is visible and it is clicked, close the sidebar
+	$("#sidebar-overlay").on("click", () => {
+		slideoutMenu.toggle(false);
 
-		if (target.hasClass("user")) {
-			output = templates.contextmenu_item({
-				class: "user",
-				action: "whois",
-				text: target.text(),
-				data: target.data("name"),
-			});
-			output += templates.contextmenu_divider();
-			output += templates.contextmenu_item({
-				class: "action-whois",
-				action: "whois",
-				text: "User information",
-				data: target.data("name"),
-			});
-			output += templates.contextmenu_item({
-				class: "action-query",
-				action: "query",
-				text: "Direct messages",
-				data: target.data("name"),
-			});
-
-			const channel = target.closest(".chan");
-			if (utils.isOpInChannel(channel) && channel.data("type") === "channel") {
-				output += templates.contextmenu_divider();
-				output += templates.contextmenu_item({
-					class: "action-kick",
-					action: "kick",
-					text: "Kick",
-					data: target.data("name"),
-				});
-			}
-		} else if (target.hasClass("chan")) {
-			let itemClass;
-
-			if (target.hasClass("lobby")) {
-				itemClass = "network";
-			} else if (target.hasClass("query")) {
-				itemClass = "query";
-			} else {
-				itemClass = "chan";
-			}
-
-			output = templates.contextmenu_item({
-				class: itemClass,
-				action: "focusChan",
-				text: target.data("title"),
-				data: target.data("target"),
-			});
-			output += templates.contextmenu_divider();
-			if (target.hasClass("lobby")) {
-				output += templates.contextmenu_item({
-					class: "list",
-					action: "list",
-					text: "List all channels",
-					data: target.data("id"),
-				});
-				output += templates.contextmenu_item({
-					class: "join",
-					action: "join",
-					text: "Join a channel…",
-					data: target.data("id"),
-				});
-			}
-			if (target.hasClass("channel")) {
-				output += templates.contextmenu_item({
-					class: "list",
-					action: "banlist",
-					text: "List banned users",
-					data: target.data("id"),
-				});
-			}
-		
-			if (!target.hasClass("lobby") && !target.hasClass('chan-\\#main')) {
-				output += templates.contextmenu_item({
-					class: "close",
-					action: "close",
-					text: target.hasClass("lobby") ? "Disconnect" : target.hasClass("channel") ? "Leave" : "Close",
-					data: target.data("target"),
-				});
-			}
-		
+		if ($(window).outerWidth() >= utils.mobileViewportPixels) {
+			storeSidebarVisibility("thelounge.state.sidebar", false);
 		}
+	});
 
-		contextMenuContainer.show();
-		contextMenu
-			.html(output)
-			.css(positionContextMenu($(that), e));
+	$("#windows").on("click", "button.lt", () => {
+		const isOpen = !slideoutMenu.isOpen();
+
+		slideoutMenu.toggle(isOpen);
+
+		if ($(window).outerWidth() >= utils.mobileViewportPixels) {
+			storeSidebarVisibility("thelounge.state.sidebar", isOpen);
+		}
+	});
+
+	viewport.on("click", ".rt", function() {
+		const isOpen = !viewport.hasClass("userlist-open");
+
+		viewport.toggleClass("userlist-open", isOpen);
+		chat.find(".chan.active .chat").trigger("keepToBottom");
+		storeSidebarVisibility("thelounge.state.userlist", isOpen);
 
 		return false;
-	}
+	});
 
 	viewport.on("contextmenu", ".network .chan", function(e) {
-		return showContextMenu(this, e);
+		return contextMenuFactory.createContextMenu($(this), e).show();
 	});
 
 	viewport.on("click contextmenu", ".user", function(e) {
-		return showContextMenu(this, e);
+		// If user is selecting text, do not open context menu
+		// This primarily only targets mobile devices where selection is performed with touch
+		if (!window.getSelection().isCollapsed) {
+			return true;
+		}
+
+		return contextMenuFactory.createContextMenu($(this), e).show();
 	});
 
 	viewport.on("click", "#chat .menu", function(e) {
 		e.currentTarget = $(`#sidebar .chan[data-id="${$(this).closest(".chan").data("id")}"]`)[0];
-		return showContextMenu(this, e);
-	});
-
-	contextMenuContainer.on("click contextmenu", function() {
-		contextMenuContainer.hide();
-		return false;
+		return contextMenuFactory.createContextMenu($(this), e).show();
 	});
 
 	function resetInputHeight(input) {
 		input.style.height = input.style.minHeight;
 	}
 
-	var input = $("#input")
-		.history()
+	const input = $("#input")
 		.on("input", function() {
-			var style = window.getComputedStyle(this);
+			const style = window.getComputedStyle(this);
 
 			// Start by resetting height before computing as scrollHeight does not
 			// decrease when deleting characters
@@ -207,45 +100,23 @@ $(function() {
 				+ Math.round(parseFloat(style.borderBottomWidth) || 0)
 			) + "px";
 
-			chat.find(".chan.active .chat").trigger("msg.sticky"); // fix growing
+			chat.find(".chan.active .chat").trigger("keepToBottom"); // fix growing
 		});
-
-	var focus = $.noop;
-	if (!("ontouchstart" in window || navigator.maxTouchPoints > 0)) {
-		focus = function() {
-			if (chat.find(".active").hasClass("chan")) {
-				input.focus();
-			}
-		};
-
-		$(window).on("focus", focus);
-
-		chat.on("click", ".chat", function() {
-			setTimeout(function() {
-				var text = "";
-				if (window.getSelection) {
-					text = window.getSelection().toString();
-				} else if (document.selection && document.selection.type !== "Control") {
-					text = document.selection.createRange().text;
-				}
-				if (!text) {
-					focus();
-				}
-			}, 2);
-		});
-	}
 
 	if (navigator.platform.match(/(Mac|iPhone|iPod|iPad)/i)) {
 		$(document.body).addClass("is-apple");
 	}
 
-	$("#form").on("submit", function(e) {
-		e.preventDefault();
-		utils.forceFocus();
-		var text = input.val();
+	$("#form").on("submit", function() {
+		// Triggering click event opens the virtual keyboard on mobile
+		// This can only be called from another interactive event (e.g. button click)
+		input.trigger("click").trigger("focus");
+
+		const target = chat.data("id");
+		const text = input.val();
 
 		if (text.length === 0) {
-			return;
+			return false;
 		}
 
 		input.val("");
@@ -254,92 +125,39 @@ $(function() {
 		if (text.charAt(0) === "/") {
 			const args = text.substr(1).split(" ");
 			const cmd = args.shift().toLowerCase();
+
 			if (typeof utils.inputCommands[cmd] === "function" && utils.inputCommands[cmd](args)) {
-				return;
+				return false;
 			}
 		}
 
-		socket.emit("input", {
-			target: chat.data("id"),
-			text: text,
-		});
-	});
+		socket.emit("input", {target, text});
 
-	$("button#set-nick").on("click", function() {
-		utils.toggleNickEditor(true);
-
-		// Selects existing nick in the editable text field
-		var element = document.querySelector("#nick-value");
-		element.focus();
-		var range = document.createRange();
-		range.selectNodeContents(element);
-		var selection = window.getSelection();
-		selection.removeAllRanges();
-		selection.addRange(range);
-	});
-
-	$("button#cancel-nick").on("click", cancelNick);
-	$("button#submit-nick").on("click", submitNick);
-
-	function submitNick() {
-		var newNick = $("#nick-value").text().trim();
-
-		if (newNick.length === 0) {
-			cancelNick();
-			return;
-		}
-
-		utils.toggleNickEditor(false);
-
-		socket.emit("input", {
-			target: chat.data("id"),
-			text: "/nick " + newNick,
-		});
-	}
-
-	function cancelNick() {
-		utils.setNick(sidebar.find(".chan.active").closest(".network").data("nick"));
-	}
-
-	$("#nick-value").keypress(function(e) {
-		switch (e.keyCode ? e.keyCode : e.which) {
-		case 13: // Enter
-			// Ensures a new line is not added when pressing Enter
-			e.preventDefault();
-			break;
-		}
-	}).keyup(function(e) {
-		switch (e.keyCode ? e.keyCode : e.which) {
-		case 13: // Enter
-			submitNick();
-			break;
-		case 27: // Escape
-			cancelNick();
-			break;
-		}
+		return false;
 	});
 
 	chat.on("click", ".inline-channel", function() {
-		var name = $(this).data("chan");
-		var chan = utils.findCurrentNetworkChan(name);
+		const name = $(this).attr("data-chan");
+		const chan = utils.findCurrentNetworkChan(name);
 
 		if (chan.length) {
-			chan.click();
-		} else {
-			socket.emit("input", {
-				target: chat.data("id"),
-				text: "/join " + name,
-			});
+			chan.trigger("click");
 		}
+
+		socket.emit("input", {
+			target: chat.data("id"),
+			text: "/join " + name,
+		});
 	});
 
 	chat.on("click", ".condensed-summary .content", function() {
 		$(this).closest(".msg.condensed").toggleClass("closed");
 	});
 
-	const openWindow = function openWindow(e, data) {
-		var self = $(this);
-		var target = self.data("target");
+	const openWindow = function openWindow(e, {keepSidebarOpen, pushState, replaceHistory} = {}) {
+		const self = $(this);
+		const target = self.attr("data-target");
+
 		if (!target) {
 			return;
 		}
@@ -359,9 +177,14 @@ $(function() {
 				self.data("id")
 			);
 
-			sidebar.find(".active").removeClass("active");
+			sidebar.find(".active")
+				.removeClass("active")
+				.attr("aria-selected", false);
+
 			self.addClass("active")
+				.attr("aria-selected", true)
 				.find(".badge")
+				.attr("data-highlight", 0)
 				.removeClass("highlight")
 				.empty();
 
@@ -369,10 +192,12 @@ $(function() {
 				utils.toggleNotificationMarkers(false);
 			}
 
-			sidebarSlide.toggle(false);
+			if (!keepSidebarOpen && $(window).outerWidth() < utils.mobileViewportPixels) {
+				slideoutMenu.toggle(false);
+			}
 		}
 
-		var lastActive = $("#windows > .active");
+		const lastActive = $("#windows > .active");
 
 		lastActive
 			.removeClass("active")
@@ -391,31 +216,38 @@ $(function() {
 			render.trimMessageInChannel(lastActiveChan, 100);
 		}
 
-		var chan = $(target)
+		const chan = $(target)
 			.addClass("active")
 			.trigger("show");
 
-		let title = $(document.body).data("app-name");
-		if (chan.data("title")) {
-			title = chan.data("title") + " — " + title;
-		}
-		document.title = title;
+		utils.togglePreviewMoreButtonsIfNeeded();
+		utils.updateTitle();
 
 		const type = chan.data("type");
-		var placeholder = "";
+		let placeholder = "";
+
 		if (type === "channel" || type === "query") {
-			placeholder = `Write to ${chan.data("title")}`;
+			placeholder = `Write to ${chan.attr("aria-label")}`;
 		}
-		input.attr("placeholder", placeholder).attr("aria-label", placeholder);
+
+		input
+			.prop("placeholder", placeholder)
+			.attr("aria-label", placeholder);
 
 		if (self.hasClass("chan")) {
 			$("#chat-container").addClass("active");
-			utils.setNick(self.closest(".network").data("nick"));
+			$("#nick").text(self.closest(".network").attr("data-nick"));
 		}
 
-		var chanChat = chan.find(".chat");
+		const chanChat = chan.find(".chat");
+
 		if (chanChat.length > 0 && type !== "special") {
 			chanChat.sticky();
+
+			// On touch devices unfocus (blur) the input to correctly close the virtual keyboard
+			// An explicit blur is required, as the keyboard may open back up if the focus remains
+			// See https://github.com/thelounge/thelounge/issues/2257
+			input.trigger("ontouchstart" in window ? "blur" : "focus");
 		}
 
 		if (chan.data("needsNamesRefresh") === true) {
@@ -423,29 +255,19 @@ $(function() {
 			socket.emit("names", {target: self.data("id")});
 		}
 
-		if (target === "#settings") {
-			$("#session-list").html("<p>Loading…</p>");
-			socket.emit("sessions:get");
-		}
-
-		if (target === "#help" || target === "#changelog") {
-			Changelog.requestIfNeeded();
-		}
-
-		focus();
-
 		// Pushes states to history web API when clicking elements with a data-target attribute.
 		// States are very trivial and only contain a single `clickTarget` property which
 		// contains a CSS selector that targets elements which takes the user to a different view
 		// when clicked. The `popstate` event listener will trigger synthetic click events using that
 		// selector and thus take the user to a different view/state.
-		if (data && data.pushState === false) {
-			return;
+		if (pushState === false) {
+			return false;
 		}
+
 		const state = {};
 
-		if (self.attr("id")) {
-			state.clickTarget = `#${self.attr("id")}`;
+		if (self.prop("id")) {
+			state.clickTarget = `#${self.prop("id")}`;
 		} else if (self.hasClass("chan")) {
 			state.clickTarget = `#sidebar .chan[data-id="${self.data("id")}"]`;
 		} else {
@@ -453,7 +275,7 @@ $(function() {
 		}
 
 		if (history && history.pushState) {
-			if (data && data.replaceHistory && history.replaceState) {
+			if (replaceHistory && history.replaceState) {
 				history.replaceState(state, null, target);
 			} else {
 				history.pushState(state, null, target);
@@ -467,159 +289,9 @@ $(function() {
 	$("#help").on("click", "#view-changelog, #back-to-help", openWindow);
 	$("#changelog").on("click", "#back-to-help", openWindow);
 
-	sidebar.on("click", "#sign-out", function() {
-		socket.emit("sign-out");
-		storage.remove("token");
-
-		if (!socket.connected) {
-			location.reload();
-		}
-	});
-
-	function closeChan(chan) {
-		var cmd = "/close";
-		
-		if (chan.hasClass("lobby")) {
-			cmd = "/quit";
-			var server = chan.find(".name").html();
-			if (!confirm("Disconnect from " + server + "?")) { // eslint-disable-line no-alert
-				return false;
-			}
-		}
-		socket.emit("input", {
-			target: chan.data("id"),
-			text: cmd,
-		});
-		chan.css({
-			transition: "none",
-			opacity: 0.4,
-		});
-		return false;
-	}
-
 	sidebar.on("click", ".close", function() {
-		closeChan($(this).closest(".chan"));
+		utils.closeChan($(this).closest(".chan"));
 	});
-
-	const contextMenuActions = {
-		join: function(itemData) {
-			const network = $(`#join-channel-${itemData}`).closest(".network");
-			JoinChannel.openForm(network);
-		},
-		close: function(itemData) {
-			closeChan($(`.networks .chan[data-target="${itemData}"]`));
-		},
-		focusChan: function(itemData) {
-			$(`.networks .chan[data-target="${itemData}"]`).click();
-		},
-		list: function(itemData) {
-			socket.emit("input", {
-				target: itemData,
-				text: "/list",
-			});
-		},
-		banlist: function(itemData) {
-			socket.emit("input", {
-				target: itemData,
-				text: "/banlist",
-			});
-		},
-		whois: function(itemData) {
-			const chan = utils.findCurrentNetworkChan(itemData);
-
-			if (chan.length) {
-				chan.click();
-			}
-
-			socket.emit("input", {
-				target: $("#chat").data("id"),
-				text: "/whois " + itemData,
-			});
-
-			$(`.channel.active .users .user[data-name="${itemData}"]`).click();
-		},
-		query: function(itemData) {
-			const chan = utils.findCurrentNetworkChan(itemData);
-
-			if (chan.length) {
-				chan.click();
-			}
-
-			socket.emit("input", {
-				target: $("#chat").data("id"),
-				text: "/query " + itemData,
-			});
-		},
-		kick: function(itemData) {
-			socket.emit("input", {
-				target: $("#chat").data("id"),
-				text: "/kick " + itemData,
-			});
-		},
-	};
-
-	contextMenuActions.execute = (name, ...args) => contextMenuActions[name] && contextMenuActions[name](...args);
-
-	contextMenu.on("click", ".context-menu-item", function() {
-		const $this = $(this);
-		const itemData = $this.data("data");
-		const contextAction = $this.data("action");
-		contextMenuActions.execute(contextAction, itemData);
-	});
-
-	chat.on("input", ".search", function() {
-		const value = $(this).val();
-		const parent = $(this).closest(".users");
-		const names = parent.find(".names-original");
-		const container = parent.find(".names-filtered");
-
-		if (!value.length) {
-			container.hide();
-			names.show();
-			return;
-		}
-
-		const fuzzyOptions = {
-			pre: "<b>",
-			post: "</b>",
-			extract: (el) => $(el).text(),
-		};
-
-		const result = fuzzy.filter(
-			value,
-			names.find(".user").toArray(),
-			fuzzyOptions
-		);
-
-		names.hide();
-		container.html(templates.user_filtered({matches: result})).show();
-	});
-
-	if ($("body").hasClass("public") && (window.location.hash === "#connect" || window.location.hash === "")) {
-		$("#connect").one("show", function() {
-			var params = URI(document.location.search);
-			params = params.search(true);
-			// Possible parameters:  name, host, port, password, tls, nick, username, realname, join
-			// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...in#Iterating_over_own_properties_only
-			for (var key in params) {
-				if (params.hasOwnProperty(key)) {
-					var value = params[key];
-					// \W searches for non-word characters
-					key = key.replace(/\W/g, "");
-
-					var element = $("#connect input[name='" + key + "']");
-					// if the element exists, it isn't disabled, and it isn't hidden
-					if (element.length > 0 && !element.is(":disabled") && !element.is(":hidden")) {
-						if (element.is(":checkbox")) {
-							element.prop("checked", (value === "1" || value === "true") ? true : false);
-						} else {
-							element.val(value);
-						}
-					}
-				}
-			}
-		});
-	}
 
 	$(document).on("visibilitychange focus click", () => {
 		if (sidebar.find(".highlight").length === 0) {
@@ -644,10 +316,12 @@ $(function() {
 		// This should always be 24h later but re-computing exact value just in case
 		setTimeout(updateDateMarkers, msUntilNextDay());
 	}
+
 	setTimeout(updateDateMarkers, msUntilNextDay());
 
 	window.addEventListener("popstate", (e) => {
 		const {state} = e;
+
 		if (!state) {
 			return;
 		}

@@ -11,18 +11,24 @@ module.exports = function(irc, network) {
 		let chan = network.getChannel(data.channel);
 
 		if (typeof chan === "undefined") {
-			chan = new Chan({
+			chan = client.createChannel({
 				name: data.channel,
+				state: Chan.State.JOINED,
 			});
-			network.channels.push(chan);
-			client.save();
+
 			client.emit("join", {
-				network: network.id,
+				network: network.uuid,
 				chan: chan.getFilteredClone(true),
+				index: network.addChannel(chan),
 			});
+			client.save();
+
+			chan.loadMessages(client, network);
 
 			// Request channels' modes
 			network.irc.raw("MODE", chan.name);
+		} else if (data.nick === irc.user.nick) {
+			chan.state = Chan.State.JOINED;
 		}
 
 		const user = new User({nick: data.nick});

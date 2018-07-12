@@ -1,6 +1,7 @@
 "use strict";
 
-const colors = require("colors/safe");
+const log = require("../../log");
+const colors = require("chalk");
 const program = require("commander");
 const fs = require("fs");
 const Helper = require("../../helper");
@@ -24,7 +25,7 @@ program
 			return;
 		}
 
-		if (users.indexOf(name) !== -1) {
+		if (users.includes(name)) {
 			log.error(`User ${colors.bold(name)} already exists.`);
 			return;
 		}
@@ -37,6 +38,7 @@ program
 				log.error("Password cannot be empty.");
 				return;
 			}
+
 			if (!err) {
 				log.prompt({
 					text: "Save logs to disk?",
@@ -56,7 +58,7 @@ program
 	});
 
 function add(manager, name, password, enableLog) {
-	var hash = Helper.password.hash(password);
+	const hash = Helper.password.hash(password);
 	manager.addUser(name, hash, enableLog);
 
 	log.info(`User ${colors.bold(name)} created.`);

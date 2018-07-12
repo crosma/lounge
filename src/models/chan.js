@@ -1,9 +1,10 @@
 "use strict";
 
-var _ = require("lodash");
-var Helper = require("../helper");
+const _ = require("lodash");
+const log = require("../log");
+const Helper = require("../helper");
 const User = require("./user");
-const userLog = require("../userLog");
+const Msg = require("./msg");
 const storage = require("../plugins/storage");
 
 module.exports = Chan;
@@ -15,16 +16,20 @@ Chan.Type = {
 	SPECIAL: "special",
 };
 
-let id = 1;
+Chan.State = {
+	PARTED: 0,
+	JOINED: 1,
+};
 
 function Chan(attr) {
 	_.defaults(this, attr, {
-		id: id++,
+		id: 0,
 		messages: [],
 		name: "",
 		key: "",
 		topic: "",
 		type: Chan.Type.CHANNEL,
+		state: Chan.State.PARTED,
 		firstUnread: 0,
 		unread: 0,
 		highlight: 0,
@@ -37,16 +42,31 @@ Chan.prototype.destroy = function() {
 };
 
 Chan.prototype.pushMessage = function(client, msg, increasesUnread) {
-	var obj = {
-		chan: this.id,
-		msg: msg,
-	};
+	const chan = this.id;
+	const obj = {chan, msg};
+
+	msg.id = client.idMsg++;
 
 	// If this channel is open in any of the clients, do not increase unread counter
-	const isOpen = _.find(client.attachedClients, {openChannel: this.id}) !== undefined;
+	const isOpen = _.find(client.attachedClients, {openChannel: chan}) !== undefined;
 
-	if ((increasesUnread || msg.highlight) && !isOpen) {
-		obj.unread = ++this.unread;
+	if (msg.self) {
+		// reset counters/markers when receiving self-/echo-message
+		this.unread = 0;
+		this.firstUnread = 0;
+		this.highlight = 0;
+	} else if (!isOpen) {
+		if (!this.firstUnread) {
+			this.firstUnread = msg.id;
+		}
+
+		if (increasesUnread || msg.highlight) {
+			obj.unread = ++this.unread;
+		}
+
+		if (msg.highlight) {
+			obj.highlight = ++this.highlight;
+		}
 	}
 
 	client.emit("msg", obj);
@@ -57,11 +77,7 @@ Chan.prototype.pushMessage = function(client, msg, increasesUnread) {
 		return;
 	}
 
-	this.messages.push(msg);
-
-	if (client.config.log === true) {
-		writeUserLog.call(this, client, msg);
-	}
+	this.writeUserLog(client, msg);
 
 	if (Helper.config.maxHistory >= 0 && this.messages.length > Helper.config.maxHistory) {
 		const deleted = this.messages.splice(0, this.messages.length - Helper.config.maxHistory);
@@ -70,20 +86,6 @@ Chan.prototype.pushMessage = function(client, msg, increasesUnread) {
 		// so for now, just don't implement dereferencing for this edge case.
 		if (Helper.config.prefetch && Helper.config.prefetchStorage && Helper.config.maxHistory > 0) {
 			this.dereferencePreviews(deleted);
-		}
-	}
-
-	if (msg.self) {
-		// reset counters/markers when receiving self-/echo-message
-		this.firstUnread = 0;
-		this.highlight = 0;
-	} else if (!isOpen) {
-		if (!this.firstUnread) {
-			this.firstUnread = msg.id;
-		}
-
-		if (msg.highlight) {
-			this.highlight++;
 		}
 	}
 };
@@ -98,14 +100,18 @@ Chan.prototype.dereferencePreviews = function(messages) {
 };
 
 Chan.prototype.getSortedUsers = function(irc) {
-	var userModeSortPriority = {};
+	const users = Array.from(this.users.values());
+
+	if (!irc || !irc.network || !irc.network.options || !irc.network.options.PREFIX) {
+		return users;
+	}
+
+	const userModeSortPriority = {};
 	irc.network.options.PREFIX.forEach((prefix, index) => {
 		userModeSortPriority[prefix.symbol] = index;
 	});
 
 	userModeSortPriority[""] = 99; // No mode is lowest
-
-	const users = Array.from(this.users.values());
 
 	return users.sort(function(a, b) {
 		if (a.mode === b.mode) {
@@ -125,7 +131,7 @@ Chan.prototype.findUser = function(nick) {
 };
 
 Chan.prototype.getUser = function(nick) {
-	return this.findUser(nick) || new User({nick: nick});
+	return this.findUser(nick) || new User({nick});
 };
 
 Chan.prototype.setUser = function(user) {
@@ -154,7 +160,7 @@ Chan.prototype.getFilteredClone = function(lastActiveChannel, lastMessage) {
 			// If client is reconnecting, only send new messages that client has not seen yet
 			if (lastMessage > -1) {
 				// When reconnecting, always send up to 100 messages to prevent message gaps on the client
-				// See https://github.com/thelounge/lounge/issues/1883
+				// See https://github.com/thelounge/thelounge/issues/1883
 				newChannel[prop] = this[prop]
 					.filter((m) => m.id > lastMessage)
 					.slice(-100);
@@ -173,17 +179,87 @@ Chan.prototype.getFilteredClone = function(lastActiveChannel, lastMessage) {
 	}, {});
 };
 
-function writeUserLog(client, msg) {
+Chan.prototype.writeUserLog = function(client, msg) {
+	this.messages.push(msg);
+
+	// Are there any logs enabled
+	if (client.messageStorage.length === 0) {
+		return;
+	}
+
+	let targetChannel = this;
+
+	// Is this particular message or channel loggable
+	if (!msg.isLoggable() || !this.isLoggable()) {
+		// Because notices are nasty and can be shown in active channel on the client
+		// if there is no open query, we want to always log notices in the sender's name
+		if (msg.type === Msg.Type.NOTICE && msg.showInActive) {
+			targetChannel = {
+				name: msg.from.nick,
+			};
+		} else {
+			return;
+		}
+	}
+
+	// Find the parent network where this channel is in
 	const target = client.find(this.id);
 
 	if (!target) {
-		return false;
+		return;
 	}
 
-	userLog.write(
-		client.name,
-		target.network.host, // TODO: Fix #1392, multiple connections to same server results in duplicate logs
-		this.type === Chan.Type.LOBBY ? target.network.host : this.name,
-		msg
-	);
+	for (const messageStorage of client.messageStorage) {
+		messageStorage.index(target.network, targetChannel, msg);
+	}
+};
+
+Chan.prototype.loadMessages = function(client, network) {
+	if (!this.isLoggable()) {
+		return;
+	}
+
+	const messageStorage = client.messageStorage.find((s) => s.canProvideMessages());
+
+	if (!messageStorage) {
+		return;
+	}
+
+	messageStorage
+		.getMessages(network, this)
+		.then((messages) => {
+			if (messages.length === 0) {
+				if (network.irc.network.cap.isEnabled("znc.in/playback")) {
+					requestZncPlayback(this, network, 0);
+				}
+
+				return;
+			}
+
+			this.messages.unshift(...messages);
+
+			if (!this.firstUnread) {
+				this.firstUnread = messages[messages.length - 1].id;
+			}
+
+			client.emit("more", {
+				chan: this.id,
+				messages: messages.slice(-100),
+			});
+
+			if (network.irc.network.cap.isEnabled("znc.in/playback")) {
+				const from = Math.floor(messages[messages.length - 1].time.getTime() / 1000);
+
+				requestZncPlayback(this, network, from);
+			}
+		})
+		.catch((err) => log.error(`Failed to load messages: ${err}`));
+};
+
+Chan.prototype.isLoggable = function() {
+	return this.type === Chan.Type.CHANNEL || this.type === Chan.Type.QUERY;
+};
+
+function requestZncPlayback(channel, network, from) {
+	network.irc.raw("ZNC", "*playback", "PLAY", channel.name, from.toString());
 }

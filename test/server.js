@@ -1,17 +1,21 @@
 "use strict";
 
+const log = require("../src/log");
 const Helper = require("../src/helper");
 const expect = require("chai").expect;
 const request = require("request");
 const io = require("socket.io-client");
 
 describe("Server", function() {
-	this.timeout(5000);
+	// Travis is having issues with slow workers and thus tests timeout
+	this.timeout(process.env.CI ? 25000 : 5000);
+
 	let server;
 	let originalLogInfo;
 
 	before(function() {
 		originalLogInfo = log.info;
+
 		log.info = () => {};
 
 		server = require("../src/server")();
@@ -85,7 +89,7 @@ describe("Server", function() {
 
 		it("should create network", (done) => {
 			client.on("init", () => {
-				client.emit("conn", {
+				client.emit("network:new", {
 					username: "test-user",
 					realname: "The Lounge Test",
 					nick: "test-user",

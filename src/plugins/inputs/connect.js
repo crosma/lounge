@@ -1,24 +1,24 @@
 "use strict";
 
-var Msg = require("../../models/msg");
+const Msg = require("../../models/msg");
 
 exports.commands = ["connect", "server"];
 exports.allowDisconnected = true;
 
-exports.input = function(network, chan, cmd, args) {
+
+exports.input = function({irc}, chan, cmd, args) {
 	chan.pushMessage(this, new Msg({
 		text: "You may not connect to other networks.",
 		showInActive: true,
 	}));
 	return false;
 
-	
 	if (args.length === 0) {
-		if (!network.irc || !network.irc.connection) {
+		if (!irc || !irc.connection) {
 			return;
 		}
 
-		if (network.irc.connection.connected) {
+		if (irc.connection.connected) {
 			chan.pushMessage(this, new Msg({
 				type: Msg.Type.ERROR,
 				text: "You are already connected.",
@@ -26,23 +26,20 @@ exports.input = function(network, chan, cmd, args) {
 			return;
 		}
 
-		network.irc.connection.connect();
+		irc.connection.connect();
 
 		return;
 	}
 
-	var port = args[1] || "";
-	var tls = port[0] === "+";
+	let port = args[1] || "";
+	const tls = port[0] === "+";
 
 	if (tls) {
 		port = port.substring(1);
 	}
 
-	this.connect({
-		host: args[0],
-		port: port,
-		tls: tls,
-	});
+	const host = args[0];
+	this.connect({host, port, tls});
 
 	return true;
 };

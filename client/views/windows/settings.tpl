@@ -5,6 +5,39 @@
 	<h1 class="title">Settings</h1>
 
 	<div class="row">
+		<div class="col-sm-6">
+			<label class="opt">
+				<input type="checkbox" name="advanced">
+				Advanced settings
+			</label>
+		</div>
+	</div>
+
+	<div class="row">
+		<div class="col-sm-12">
+			<button type="button" class="btn" id="make-default-client">Open irc:// URLs with The Lounge</button>
+		</div>
+
+		{{#unless public}}
+		<div class="col-sm-12" data-advanced>
+			<h2>
+				Settings synchronisation
+				<span class="tooltipped tooltipped-n tooltipped-no-delay" aria-label="Note: This is an experimental feature and may change in future releases.">
+					<button class="extra-experimental" aria-label="Note: This is an experimental feature and may change in future releases."></button>
+				</span>
+			</h2>
+			<label class="opt">
+				<input type="checkbox" name="syncSettings">
+				Synchronize settings with other clients.
+			</label>
+			<p class="sync-warning-override"><strong>Warning</strong> Checking this box will override the settings of this client with those stored on the server.</p>
+			<p class="sync-warning-base"><strong>Warning</strong> No settings have been synced before. Enabling this will sync all settings of this client as the base for other clients.</p>
+			<div class="opt force-sync-button">
+				<button type="button" class="btn" id="forceSync">Force sync settings</button>
+				<p>This will override any settings already synced to the server.</p>
+			</div>
+		</div>
+		{{/unless}}
 		<div class="col-sm-12">
 			<h2>Messages</h2>
 		</div>
@@ -55,7 +88,7 @@
 				Enable autocomplete
 			</label>
 		</div>
-		<div class="col-sm-12">
+		<div class="col-sm-12" data-advanced>
 			<label class="opt">
 				<label for="nickPostfix" class="sr-only">Nick autocomplete postfix (e.g. <code>, </code>)</label>
 				<input type="text" id="nickPostfix" name="nickPostfix" class="input" placeholder="Nick autocomplete postfix (e.g. ', ')">
@@ -137,14 +170,14 @@
 			</div>
 		</div>
 
-		<div class="col-sm-12">
+		<div class="col-sm-12" data-advanced>
 			<label class="opt">
 				<input type="checkbox" name="notifyAllMessages">
 				Enable notification for all messages
 			</label>
 		</div>
 
-		<div class="col-sm-12">
+		<div class="col-sm-12" data-advanced>
 			<label class="opt">
 				<label for="highlights" class="sr-only">Custom highlights (comma-separated keywords)</label>
 				<input type="text" id="highlights" name="highlights" class="input" placeholder="Custom highlights (comma-separated keywords)">
@@ -158,17 +191,20 @@
 				<div class="col-sm-12">
 					<h2>Change password</h2>
 				</div>
-				<div class="col-sm-12">
+				<div class="col-sm-12 password-container">
 					<label for="old_password_input" class="sr-only">Enter current password</label>
 					<input type="password" id="old_password_input" name="old_password" class="input" placeholder="Enter current password">
+					{{> ../reveal-password}}
 				</div>
-				<div class="col-sm-12">
+				<div class="col-sm-12 password-container">
 					<label for="new_password_input" class="sr-only">Enter desired new password</label>
 					<input type="password" id="new_password_input" name="new_password" class="input" placeholder="Enter desired new password">
+					{{> ../reveal-password}}
 				</div>
-				<div class="col-sm-12">
+				<div class="col-sm-12 password-container">
 					<label for="verify_password_input" class="sr-only">Repeat new password</label>
 					<input type="password" id="verify_password_input" name="verify_password" class="input" placeholder="Repeat new password">
+					{{> ../reveal-password}}
 				</div>
 				<div class="col-sm-12 feedback"></div>
 				<div class="col-sm-12">
@@ -178,10 +214,10 @@
 		</div>
 			{{/unless}}
 		{{/unless}}
-		<div class="col-sm-12">
+		<div class="col-sm-12" data-advanced>
 			<h2>Custom Stylesheet</h2>
 		</div>
-		<div class="col-sm-12">
+		<div class="col-sm-12" data-advanced>
 			<label for="user-specified-css-input" class="sr-only">Custom stylesheet. You can override any style with CSS here.</label>
 			<textarea class="input" name="userStyles" id="user-specified-css-input" placeholder="/* You can override any style with CSS here */"></textarea>
 		</div>

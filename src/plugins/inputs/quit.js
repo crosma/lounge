@@ -1,8 +1,12 @@
 "use strict";
 
+<<<<<<< HEAD
 const Msg = require("../../models/msg");
 
 var _ = require("lodash");
+=======
+const _ = require("lodash");
+>>>>>>> origin/master
 const Helper = require("../../helper");
 
 exports.commands = ["quit"];
@@ -21,12 +25,13 @@ exports.input = function(network, chan, cmd, args) {
 	
 	return false;
 
+
 	
 	client.networks = _.without(client.networks, network);
 	network.destroy();
 	client.save();
 	client.emit("quit", {
-		network: network.id,
+		network: network.uuid,
 	});
 
 	if (network.irc) {

@@ -1,6 +1,7 @@
 "use strict";
 
 const _ = require("lodash");
+const log = require("../log");
 const fs = require("fs");
 const path = require("path");
 const WebPushAPI = require("web-push");
@@ -31,20 +32,20 @@ class WebPush {
 		}
 
 		WebPushAPI.setVapidDetails(
-			"https://github.com/thelounge/lounge",
+			"https://github.com/thelounge/thelounge",
 			this.vapidKeys.publicKey,
 			this.vapidKeys.privateKey
 		);
 	}
 
 	push(client, payload, onlyToOffline) {
-		_.forOwn(client.config.sessions, (session, token) => {
-			if (session.pushSubscription) {
-				if (onlyToOffline && _.find(client.attachedClients, {token: token}) !== undefined) {
+		_.forOwn(client.config.sessions, ({pushSubscription}, token) => {
+			if (pushSubscription) {
+				if (onlyToOffline && _.find(client.attachedClients, {token}) !== undefined) {
 					return;
 				}
 
-				this.pushSingle(client, session.pushSubscription, payload);
+				this.pushSingle(client, pushSubscription, payload);
 			}
 		});
 	}
@@ -56,8 +57,8 @@ class WebPush {
 				if (error.statusCode >= 400 && error.statusCode < 500) {
 					log.warn(`WebPush subscription for ${client.name} returned an error (${error.statusCode}), removing subscription`);
 
-					_.forOwn(client.config.sessions, (session, token) => {
-						if (session.pushSubscription && session.pushSubscription.endpoint === subscription.endpoint) {
+					_.forOwn(client.config.sessions, ({pushSubscription}, token) => {
+						if (pushSubscription && pushSubscription.endpoint === subscription.endpoint) {
 							client.unregisterPushSubscription(token);
 						}
 					});

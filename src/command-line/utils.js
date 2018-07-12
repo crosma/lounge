@@ -1,7 +1,8 @@
 "use strict";
 
 const _ = require("lodash");
-const colors = require("colors/safe");
+const log = require("../log");
+const colors = require("chalk");
 const fs = require("fs");
 const Helper = require("../helper");
 const path = require("path");
@@ -20,33 +21,34 @@ class Utils {
 		].forEach((e) => log.raw(e));
 	}
 
+	// TODO: Remove in a couple of releases
+	static checkOldHome() {
+		const currentHome = Helper.getHomePath();
+		const oldHome = currentHome.replace(/\.thelounge$/, ".lounge");
+
+		if (currentHome === oldHome || !fs.existsSync(oldHome)) {
+			return;
+		}
+
+		console.log(); // eslint-disable-line no-console
+		log.warn(`Folder ${colors.bold.red(oldHome)} still exists.`);
+		log.warn(`In v3, we renamed the default configuration folder to ${colors.bold.green(".thelounge")} for consistency.`);
+		log.warn(`You might want to rename the folder from ${colors.bold.red(".lounge")} to ${colors.bold.green(".thelounge")} to keep existing configuration.`);
+		log.warn("Make sure to look at the release notes to see other breaking changes.");
+		console.log(); // eslint-disable-line no-console
+	}
+
 	static defaultHome() {
 		if (home) {
 			return home;
 		}
 
-		let distConfig;
-
-		// TODO: Remove this section when releasing The Lounge v3
-		const deprecatedDistConfig = path.resolve(path.join(
+		const distConfig = path.resolve(path.join(
 			__dirname,
 			"..",
 			"..",
-			".lounge_home"
+			".thelounge_home"
 		));
-		if (fs.existsSync(deprecatedDistConfig)) {
-			log.warn(`${colors.green(".lounge_home")} is ${colors.bold.red("deprecated")} and will be ignored as of The Lounge v3.`);
-			log.warn(`Use ${colors.green(".thelounge_home")} instead.`);
-
-			distConfig = deprecatedDistConfig;
-		} else {
-			distConfig = path.resolve(path.join(
-				__dirname,
-				"..",
-				"..",
-				".thelounge_home"
-			));
-		}
 
 		home = fs.readFileSync(distConfig, "utf-8").trim();
 
@@ -72,12 +74,15 @@ class Utils {
 			} else if (/^\[.*\]$/.test(value)) { // Arrays
 				// Supporting arrays `[a,b]` and `[a, b]`
 				const array = value.slice(1, -1).split(/,\s*/);
+
 				// If [] is given, it will be parsed as `[ "" ]`, so treat this as empty
 				if (array.length === 1 && array[0] === "") {
 					return [];
 				}
+
 				return array.map(parseValue); // Re-parses all values of the array
 			}
+
 			return value;
 		};
 
@@ -100,6 +105,65 @@ class Utils {
 		}
 
 		return memo;
+	}
+
+	static executeYarnCommand(...parameters) {
+		// First off, try to find yarn inside of The Lounge
+		let yarn = path.join(
+			__dirname, "..", "..", "node_modules",
+			"yarn", "bin", "yarn.js"
+		);
+
+		if (!fs.existsSync(yarn)) {
+			// Now try to find yarn in the same parent folder as The Lounge (flat install)
+			yarn = path.join(
+				__dirname, "..", "..", "..",
+				"yarn", "bin", "yarn.js"
+			);
+
+			if (!fs.existsSync(yarn)) {
+				// Fallback to global installation
+				yarn = "yarn";
+			}
+		}
+
+		return new Promise((resolve, reject) => {
+			let success = false;
+			const add = require("child_process").spawn(process.execPath, [yarn, ...parameters]);
+
+			add.stdout.on("data", (data) => {
+				data.toString().trim().split("\n").forEach((line) => {
+					line = JSON.parse(line);
+
+					if (line.type === "success") {
+						success = true;
+					}
+				});
+			});
+
+			add.stderr.on("data", (data) => {
+				data.toString().trim().split("\n").forEach((line) => {
+					const json = JSON.parse(line);
+
+					if (json.type === "error") {
+						log.error(json.data);
+					}
+				});
+			});
+
+			add.on("error", (e) => {
+				log.error(`${e}`);
+				process.exit(1);
+			});
+
+			add.on("close", (code) => {
+				if (!success || code !== 0) {
+					return reject(code);
+				}
+
+				resolve();
+			});
+		});
 	}
 }
 

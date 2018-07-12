@@ -10,15 +10,25 @@ const constants = require("./constants");
 
 const input = $("#input");
 let textcomplete;
+let enabled = false;
 
 module.exports = {
 	enable: enableAutocomplete,
-	disable: () => {
-		input.unbind("input.tabcomplete");
-		Mousetrap(input.get(0)).unbind("tab", "keydown");
-		textcomplete.destroy();
+	disable() {
+		if (enabled) {
+			input.off("input.tabcomplete");
+			Mousetrap(input.get(0)).unbind("tab", "keydown");
+			textcomplete.destroy();
+			enabled = false;
+		}
 	},
 };
+
+$("#form").on("submit", () => {
+	if (enabled) {
+		textcomplete.hide();
+	}
+});
 
 const chat = $("#chat");
 const sidebar = $("#sidebar");
@@ -46,6 +56,7 @@ const nicksStrategy = {
 	match: /\B(@([a-zA-Z_[\]\\^{}|`@][a-zA-Z0-9_[\]\\^{}|`-]*)?)$/,
 	search(term, callback) {
 		term = term.slice(1);
+
 		if (term[0] === "@") {
 			callback(completeNicks(term.slice(1), true)
 				.map((val) => ["@" + val[0], "@" + val[1]]));
@@ -58,7 +69,7 @@ const nicksStrategy = {
 	},
 	replace([, original], position = 1) {
 		// If no postfix specified, return autocompleted nick as-is
-		if (!options.nickPostfix) {
+		if (!options.settings.nickPostfix) {
 			return original;
 		}
 
@@ -68,7 +79,7 @@ const nicksStrategy = {
 		}
 
 		// If nick is first in the input, append specified postfix
-		return original + options.nickPostfix;
+		return original + options.settings.nickPostfix;
 	},
 	index: 1,
 };
@@ -118,6 +129,7 @@ const foregroundColorStrategy = {
 						post: "</b>",
 					}).rendered];
 				}
+
 				return i;
 			});
 
@@ -146,6 +158,7 @@ const backgroundColorStrategy = {
 						post: "</b>",
 					}).rendered];
 				}
+
 				return pair;
 			})
 			.map((pair) => pair.concat(match[1])); // Needed to pass fg color to `template`...
@@ -162,6 +175,7 @@ const backgroundColorStrategy = {
 };
 
 function enableAutocomplete() {
+	enabled = true;
 	let tabCount = 0;
 	let lastMatch = "";
 	let currentMatches = [];
@@ -254,21 +268,37 @@ function fuzzyGrep(term, array) {
 	return results.map((el) => [el.string, el.original]);
 }
 
+function rawNicks() {
+	const chan = chat.find(".active");
+	const users = chan.find(".userlist");
+
+	// If this channel has a list of nicks, just return it
+	if (users.length > 0) {
+		return users.data("nicks");
+	}
+
+	const me = $("#nick").text();
+	const otherUser = chan.attr("aria-label");
+
+	// If this is a query, add their name to autocomplete
+	if (me !== otherUser && chan.data("type") === "query") {
+		return [otherUser, me];
+	}
+
+	// Return our own name by default for anything that isn't a channel or query
+	return [me];
+}
+
 function completeNicks(word, isFuzzy) {
-	const users = chat.find(".active .users");
+	const users = rawNicks();
 	word = word.toLowerCase();
 
-	// Lobbies and private chats do not have an user list
-	if (!users.length) {
-		return [];
+	if (isFuzzy) {
+		return fuzzyGrep(word, users);
 	}
 
-	const words = users.data("nicks");
-	if (isFuzzy) {
-		return fuzzyGrep(word, words);
-	}
 	return $.grep(
-		words,
+		users,
 		(w) => !w.toLowerCase().indexOf(word)
 	);
 }
@@ -282,11 +312,14 @@ function completeCommands(word) {
 function completeChans(word) {
 	const words = [];
 
-	sidebar.find(".chan")
+	sidebar.find(".chan.active")
+		.parent()
+		.find(".chan")
 		.each(function() {
 			const self = $(this);
-			if (!self.hasClass("lobby")) {
-				words.push(self.data("title"));
+
+			if (self.hasClass("channel")) {
+				words.push(self.attr("aria-label"));
 			}
 		});
 

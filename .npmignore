@@ -11,10 +11,12 @@
 client/**
 !client/js/libs/handlebars/ircmessageparser/findLinks.js
 !client/js/libs/handlebars/ircmessageparser/cleanIrcMessage.js
+!client/index.html.tpl
 
 public/js/bundle.vendor.js.map
 coverage/
 scripts/
 test/
 appveyor.yml
-webpack.config.js
+webpack.config*.js
+renovate.json

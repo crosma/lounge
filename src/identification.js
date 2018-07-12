@@ -1,8 +1,9 @@
 "use strict";
 
+const log = require("./log");
 const fs = require("fs");
 const net = require("net");
-const colors = require("colors/safe");
+const colors = require("chalk");
 const Helper = require("./helper");
 
 class Identification {
@@ -22,12 +23,12 @@ class Identification {
 				log.warn("Using both identd and oidentd at the same time, this is most likely not intended.");
 			}
 
-			var server = net.createServer(this.serverConnection.bind(this));
+			const server = net.createServer(this.serverConnection.bind(this));
 			server.listen({
 				port: Helper.config.identd.port || 113,
 				host: Helper.config.bind || Helper.config.host,
 			}, () => {
-				var address = server.address();
+				const address = server.address();
 				log.info(`Identd server available on ${colors.green(address.address + ":" + address.port)}`);
 
 				startedCallback(this);
@@ -47,14 +48,14 @@ class Identification {
 	respondToIdent(socket, data) {
 		data = data.toString().split(",");
 
-		const lport = parseInt(data[0]);
-		const fport = parseInt(data[1]);
+		const lport = parseInt(data[0], 10) || 0;
+		const fport = parseInt(data[1], 10) || 0;
 
 		if (lport < 1 || fport < 1 || lport > 65535 || fport > 65535) {
 			return;
 		}
 
-		for (var connection of this.connections.values()) {
+		for (const connection of this.connections.values()) {
 			if (connection.socket.remoteAddress === socket.remoteAddress
 			&& connection.socket.remotePort === fport
 			&& connection.socket.localPort === lport
@@ -69,7 +70,7 @@ class Identification {
 	addSocket(socket, user) {
 		const id = ++this.connectionId;
 
-		this.connections.set(id, {socket: socket, user: user});
+		this.connections.set(id, {socket, user});
 
 		if (this.oidentdFile) {
 			this.refresh();
@@ -91,9 +92,9 @@ class Identification {
 
 		this.connections.forEach((connection) => {
 			file += `to ${connection.socket.remoteAddress}`
-				+ ` lport ${connection.socket.localPort}`
-				+ ` from ${connection.socket.localAddress}`
 				+ ` fport ${connection.socket.remotePort}`
+				+ ` from ${connection.socket.localAddress}`
+				+ ` lport ${connection.socket.localPort}`
 				+ ` { reply "${connection.user}" }\n`;
 		});
 

@@ -16,6 +16,7 @@ module.exports = function(irc, network) {
 		}
 
 		const targetChan = network.getChannel(data.channel);
+
 		if (typeof targetChan === "undefined") {
 			return;
 		}
@@ -39,6 +40,7 @@ module.exports = function(irc, network) {
 			targetChan = network.channels[0];
 		} else {
 			targetChan = network.getChannel(data.target);
+
 			if (typeof targetChan === "undefined") {
 				return;
 			}
@@ -80,6 +82,7 @@ module.exports = function(irc, network) {
 			}
 
 			const user = targetChan.findUser(mode.param);
+
 			if (!user) {
 				return;
 			}
@@ -94,7 +97,7 @@ module.exports = function(irc, network) {
 
 			if (!add) {
 				_.pull(user.modes, changedMode);
-			} else if (user.modes.indexOf(changedMode) === -1) {
+			} else if (!user.modes.includes(changedMode)) {
 				user.modes.push(changedMode);
 				user.modes.sort(function(a, b) {
 					return userModeSortPriority[a] - userModeSortPriority[b];

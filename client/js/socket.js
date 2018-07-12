@@ -3,11 +3,10 @@
 const $ = require("jquery");
 const io = require("socket.io-client");
 const utils = require("./utils");
-const path = window.location.pathname + "socket.io/";
 
 const socket = io({
 	transports: $(document.body).data("transports"),
-	path: path,
+	path: window.location.pathname + "socket.io/",
 	autoConnect: false,
 	reconnection: !$(document.body).hasClass("public"),
 });
@@ -41,7 +40,7 @@ function handleDisconnect(data) {
 	const message = data.message || data;
 
 	$("#loading-page-message, #connection-error").text(`Waiting to reconnect… (${message})`).addClass("shown");
-	$(".show-more-button, #input").prop("disabled", true);
+	$(".show-more button, #input").prop("disabled", true);
 	$("#submit").hide();
 
 	// If the server shuts down, socket.io skips reconnection
