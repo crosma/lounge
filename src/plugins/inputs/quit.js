@@ -1,12 +1,7 @@
 "use strict";
 
-<<<<<<< HEAD
 const _ = require("lodash");
-=======
 const Msg = require("../../models/msg");
-
-var _ = require("lodash");
->>>>>>> Lots of stuff. Don't judge.
 const Helper = require("../../helper");
 
 exports.commands = ["quit"];
