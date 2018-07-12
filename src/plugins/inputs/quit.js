@@ -9,6 +9,8 @@ exports.commands = ["quit"];
 exports.allowDisconnected = true;
 
 exports.input = function(network, chan, cmd, args) {
+	var client = this;
+	
 	const lobby = network.channels[0];
 	const msg = new Msg({
 		type: Msg.Type.ERROR,
@@ -18,12 +20,7 @@ exports.input = function(network, chan, cmd, args) {
 	lobby.pushMessage(client, msg, true);
 	
 	return false;
-	
-	
-	
-	var client = this;
-	
-	return false;
+
 	
 	client.networks = _.without(client.networks, network);
 	network.destroy();

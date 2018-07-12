@@ -18,14 +18,6 @@ exports.input = function(network, chan, cmd, args) {
 		target = chan;
 		partMessage = args.join(" ");
 	}
-	
-	if (chan.name.toLowerCase() == '#main') {
-		chan.pushMessage(this, new Msg({
-			type: Msg.Type.ERROR,
-			text: "You may not leave #main.",
-		}));
-		return false;
-	}
 
 	if (target.type === Chan.Type.LOBBY) {
 		chan.pushMessage(this, new Msg({
@@ -35,11 +27,13 @@ exports.input = function(network, chan, cmd, args) {
 		return;
 	}
 
-	network.channels = _.without(network.channels, target);
-	target.destroy();
-	this.emit("part", {
-		chan: target.id,
-	});
+	if (target.type !== Chan.Type.CHANNEL || !network.irc || !network.irc.connection) {
+		network.channels = _.without(network.channels, target);
+		target.destroy();
+		this.emit("part", {
+			chan: target.id,
+		});
+	}
 
 	if (target.type === Chan.Type.CHANNEL) {
 		this.save();
