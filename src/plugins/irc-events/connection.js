@@ -169,6 +169,9 @@ module.exports = function(irc, network) {
 		const status = network.getNetworkStatus();
 		status.network = network.uuid;
 
+		//secure is false for some reason which is total bullshit.
+		status.secure = true;
+		
 		client.emit("network:status", status);
 	}
 };

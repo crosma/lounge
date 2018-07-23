@@ -1,5 +1,6 @@
 "use strict";
 
+
 const $ = require("jquery");
 const socket = require("../socket");
 const templates = require("../../views");

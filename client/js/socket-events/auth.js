@@ -52,7 +52,7 @@ socket.on("auth", function(data) {
 	let token;
 	const user = storage.get("user");
 	
-	console.log('cookies', cookies.all());
+	console.log('cookies3', cookies.all());
 	
 	if (!data.success) {
 		if (login.length === 0) {

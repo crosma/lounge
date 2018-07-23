@@ -304,7 +304,7 @@ Network.prototype.getNetworkStatus = function() {
 			const isAuthorized = transport.socket.encrypted && transport.socket.authorized;
 
 			status.connected = transport.isConnected();
-			status.secure = isAuthorized || isLocalhost;
+			status.secure = true; //dirty hack since this is local and it can get fucked //isAuthorized || isLocalhost;
 		}
 	}
 

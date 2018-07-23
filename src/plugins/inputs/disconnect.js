@@ -13,12 +13,10 @@ exports.input = function(network, chan, cmd, args) {
 		type: Msg.Type.ERROR,
 		text: "You may not disconnect.",
 		showInActive: true,
-	});
-	lobby.pushMessage(client, msg, true);
+	}));
 	return false;
 	
 	var quitMessage = args[0] ? args.join(" ") : Helper.config.leaveMessage;
-
 
 	// Even if we are disconnected, but there is an internal connection object
 	// pass the quit/end to it, so the reconnection timer stops
@@ -29,3 +27,4 @@ exports.input = function(network, chan, cmd, args) {
 	network.userDisconnected = true;
 	this.save();
 };
+    
