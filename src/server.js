@@ -22,6 +22,8 @@ themes.loadLocalThemes();
 const packages = require("./plugins/packages/index");
 packages.loadPackages();
 
+const mr = require("./mr");
+
 // The order defined the priority: the first available plugin is used
 // ALways keep local auth in the end, which should always be enabled.
 const authPlugins = [
@@ -209,8 +211,12 @@ module.exports = function() {
 		if (Helper.config.prefetchStorage) {
 			require("./plugins/storage").emptyDir();
 		}
+		
+		mr.initialize(manager);
 	});
 
+	
+	
 	return server;
 };
 

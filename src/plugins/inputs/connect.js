@@ -8,6 +8,7 @@ exports.allowDisconnected = true;
 
 exports.input = function({irc}, chan, cmd, args) {
 	chan.pushMessage(this, new Msg({
+		type: Msg.Type.ERROR,
 		text: "You may not connect to other networks.",
 		showInActive: true,
 	}));
