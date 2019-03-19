@@ -13,7 +13,6 @@ exports.input = function(network, chan, cmd, args) {
 	}));
 	return false;
 
-	
 	if (args.length === 0) {
 		network.userDisconnected = false;
 		this.save();

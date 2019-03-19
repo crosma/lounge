@@ -1,5 +1,6 @@
 "use strict";
 
+const Msg = require("../../models/msg");
 const _ = require("lodash");
 const Msg = require("../../models/msg");
 const Helper = require("../../helper");
@@ -9,7 +10,6 @@ exports.allowDisconnected = true;
 
 exports.input = function(network, chan, cmd, args) {
 	const client = this;
-	
 	const lobby = network.channels[0];
 	const msg = new Msg({
 		type: Msg.Type.ERROR,

@@ -27,4 +27,3 @@ exports.input = function(network, chan, cmd, args) {
 	network.userDisconnected = true;
 	this.save();
 };
-    

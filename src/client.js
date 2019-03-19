@@ -82,6 +82,7 @@ function Client(manager, name, config = {}) {
 		networks: [],
 		sockets: manager.sockets,
 		manager: manager,
+		authToken: false,
 		messageStorage: [],
 		highlightRegex: null,
 		authToken: false,

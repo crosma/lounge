@@ -112,9 +112,19 @@ socket.on("configuration", function(data) {
 		utils.togglePasswordField("#connect .reveal-password");
 	});
 
+
+	if (data.ui && "connectEnabled" in data.ui && !data.ui.connectEnabled) {
+		$("#footer .connect").parent().remove();
+	}	
+	
+	if (data.ui && "signoutEnabled" in data.ui && !data.ui.signoutEnabled) {
+		$("#footer .sign-out").parent().remove();
+	} 
+		
+
 	if ("URLSearchParams" in window) {
 		const params = new URLSearchParams(document.location.search);
-
+		
 		if (params.has("uri")) {
 			parseIrcUri(params.get("uri") + location.hash, data);
 		} else if ($(document.body).hasClass("public")) {

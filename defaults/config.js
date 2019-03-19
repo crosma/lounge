@@ -476,9 +476,9 @@ module.exports = {
 		// Enable the API
 		//
 		// @type     boolean
-		// @default  false 
+		// @default  false
 		//
-		enabled: true,
+		enabled: false,
 
 		// Password for API requests.
 		// Must be set for the API to accept requests.
@@ -506,8 +506,6 @@ module.exports = {
 	
 	// Extra debugging
 
-
-	
 	// ## Debugging settings
 
 	// The `debug` object contains several settings to enable debugging in The

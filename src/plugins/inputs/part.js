@@ -27,6 +27,8 @@ exports.input = function(network, chan, cmd, args) {
 		return;
 	}
 
+	
+
 	// If target is not a channel or we are not connected, instantly remove the channel
 	// Otherwise send part to the server and wait for response
 	if (target.type !== Chan.Type.CHANNEL
