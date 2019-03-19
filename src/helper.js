@@ -291,8 +291,15 @@ function parseHostmask(hostmask) {
 	};
 
 	return result;
-}
+} 
 
 function compareHostmask(a, b) {
+	if (typeof a.nick === "undefined" || typeof b.nick === "undefined" || typeof a.ident === "undefined" || typeof b.ident === "undefined" || typeof a.hostname === "undefined" || typeof b.hostname === "undefined") {
+		console.error('missing data!?');
+		console.log(a);
+		console.log(b);
+		return false;
+	}
+	
 	return (a.nick.toLowerCase() === b.nick.toLowerCase() || a.nick === "*") && (a.ident.toLowerCase() === b.ident.toLowerCase() || a.ident === "*") && (a.hostname.toLowerCase() === b.hostname.toLowerCase() || a.hostname === "*");
 }
