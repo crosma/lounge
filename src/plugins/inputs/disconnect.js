@@ -13,7 +13,7 @@ exports.input = function(network, chan, cmd, args) {
 		type: Msg.Type.ERROR,
 		text: "You may not disconnect.",
 		showInActive: true,
-	}));
+	});
 	return false;
 	
 	var quitMessage = args[0] ? args.join(" ") : Helper.config.leaveMessage;

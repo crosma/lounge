@@ -243,12 +243,14 @@ function mergeConfig(oldConfig, newConfig) {
 			log.warn(`Unknown key "${colors.bold(key)}", please verify your config.`);
 		}
 
+		/*
 		// Do not override config variables if the type is incorrect (e.g. object changed into a string)
 		if (typeof objValue !== "undefined" && objValue !== null && typeof objValue !== typeof srcValue) {
 			log.warn(`Incorrect type for "${colors.bold(key)}", please verify your config.`);
 
 			return objValue;
 		}
+		*/
 
 		// For arrays, simply override the value with user provided one.
 		if (_.isArray(objValue)) {

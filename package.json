@@ -40,8 +40,8 @@
   },
   "dependencies": {
     "bcryptjs": "2.4.3",
-    "chalk": "2.4.2",
     "browser-cookies": "1.2.0",
+    "chalk": "2.4.2",
     "cheerio": "0.22.0",
     "commander": "2.19.0",
     "express": "4.16.4",
@@ -56,11 +56,12 @@
     "package-json": "6.1.0",
     "read": "1.0.7",
     "read-chunk": "3.1.0",
+    "redis": "2.8.0",
     "request": "2.88.0",
     "semver": "5.6.0",
     "socket.io": "2.2.0",
     "socketio-file-upload": "0.7.0",
-	"redis": "2.8.0",
+    "sqlite3": "4.0.6",
     "thelounge-ldapjs-non-maintained-fork": "1.0.2",
     "tlds": "1.203.1",
     "ua-parser-js": "0.7.19",
@@ -68,9 +69,7 @@
     "web-push": "3.3.3",
     "yarn": "1.13.0"
   },
-  "optionalDependencies": {
-    "sqlite3": "4.0.6"
-  },
+  "optionalDependencies": {},
   "devDependencies": {
     "@babel/core": "7.3.4",
     "@babel/preset-env": "7.3.4",

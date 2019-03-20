@@ -1,5 +1,7 @@
 "use strict";
 
+process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
+
 const _ = require("lodash");
 const log = require("./log");
 const pkg = require("../package.json");
@@ -38,6 +40,7 @@ const serverHash = Math.floor(Date.now() * Math.random());
 
 let manager = null;
 
+
 module.exports = function() {
 	log.info(`The Lounge ${colors.green(Helper.getVersion())} \
 (Node.js ${colors.green(process.versions.node)} on ${colors.green(process.platform)} ${process.arch})`);
@@ -56,6 +59,7 @@ module.exports = function() {
 		.use(express.static(path.join(__dirname, "..", "public"), staticOptions))
 		.use("/storage/", express.static(Helper.getStoragePath(), staticOptions));
 
+		
 	if (Helper.config.fileUpload.enable) {
 		Uploader.router(app);
 	}

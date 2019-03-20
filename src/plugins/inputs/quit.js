@@ -1,6 +1,5 @@
 "use strict";
 
-const Msg = require("../../models/msg");
 const _ = require("lodash");
 const Msg = require("../../models/msg");
 const Helper = require("../../helper");

@@ -2,7 +2,6 @@
 
 const $ = require("jquery");
 const cookies = require('browser-cookies');
-const createHistory = require('history').createBrowserHistory
 const socket = require("../socket");
 const storage = require("../localStorage");
 const utils = require("../utils");
